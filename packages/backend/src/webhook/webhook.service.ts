@@ -33,6 +33,12 @@ export class WebhookService {
     return await this.webhookRepository.save(webhook);
   }
 
+  async findByPath(path: string): Promise<Webhook | null> {
+    return await this.webhookRepository.findOne({
+      where: { path },
+    });
+  }
+
   async findAll(
     userId: string,
     query: WebhookListQueryDto,
