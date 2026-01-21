@@ -5,14 +5,24 @@ import {
   HistoryOutlined,
   ApiOutlined,
 } from "@ant-design/icons";
+import type { MenuProps } from "antd";
 
 const { Sider } = Layout;
 
 interface SidebarProps {
   collapsed: boolean;
+  onCollapse: (collapsed: boolean) => void;
+  selectedKeys?: string[];
+  onMenuClick?: (key: string) => void;
 }
 
-export const Sidebar = ({ collapsed }: SidebarProps) => {
+export const Sidebar = ({
+  collapsed,
+  selectedKeys,
+  onMenuClick,
+}: Omit<SidebarProps, "onCollapse"> & {
+  onCollapse: (collapsed: boolean) => void;
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -34,30 +44,36 @@ export const Sidebar = ({ collapsed }: SidebarProps) => {
     },
   ];
 
+  const handleMenuClick: MenuProps["onClick"] = (info) => {
+    if (onMenuClick) {
+      onMenuClick(info.key);
+    } else {
+      navigate(info.key);
+    }
+  };
+
   return (
     <Sider
       trigger={null}
       collapsible
       collapsed={collapsed}
-      className="h-screen overflow-auto sticky top-0 left-0 bg-white shadow-md"
+      breakpoint="lg"
+      onBreakpoint={() => {
+        // Handled by parent
+      }}
     >
-      <div className="h-16 flex items-center justify-center border-b border-gray-100">
-        <span
-          className={`text-xl font-bold text-primary-600 transition-all duration-300 ${collapsed ? "scale-0 w-0" : "scale-100"}`}
-        >
-          Webhook
-        </span>
+      <div className="demo-logo-vertical" />
+      <div
+        className={`text-white p-4 font-bold text-lg flex items-center justify-center transition-all duration-300 ${collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}
+      >
+        Webhook mgr
       </div>
       <Menu
+        theme="dark"
         mode="inline"
-        selectedKeys={[
-          location.pathname === "/"
-            ? "/"
-            : `/${location.pathname.split("/")[1]}`,
-        ]}
+        selectedKeys={selectedKeys || [location.pathname]}
         items={menuItems}
-        onClick={({ key }) => navigate(key)}
-        className="border-none"
+        onClick={handleMenuClick}
       />
     </Sider>
   );
