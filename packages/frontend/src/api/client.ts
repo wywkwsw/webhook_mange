@@ -9,9 +9,8 @@ const client = axios.create({
 // Request interceptor
 client.interceptors.request.use(
   (config) => {
-    // FE-050 will implement proper token management in store
-    // For now we assume token is stored in localStorage
-    const token = localStorage.getItem("token");
+    // Use token from Zustand store
+    const token = useAuthStore.getState().token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
