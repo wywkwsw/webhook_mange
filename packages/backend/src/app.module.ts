@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "./auth/auth.module";
 import { UserModule } from "./user/user.module";
+import { WebhookModule } from "./webhook/webhook.module";
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { UserModule } from "./user/user.module";
     }),
     AuthModule,
     UserModule,
+    WebhookModule,
   ],
   controllers: [],
   providers: [],
