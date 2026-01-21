@@ -5,6 +5,7 @@ import { AuthModule } from "./auth/auth.module";
 import { HookModule } from "./hook/hook.module";
 import { UserModule } from "./user/user.module";
 import { WebhookModule } from "./webhook/webhook.module";
+import { WebhookLogModule } from "./webhook-log/webhook-log.module";
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { WebhookModule } from "./webhook/webhook.module";
     HookModule,
     UserModule,
     WebhookModule,
+    WebhookLogModule,
   ],
   controllers: [],
   providers: [],
