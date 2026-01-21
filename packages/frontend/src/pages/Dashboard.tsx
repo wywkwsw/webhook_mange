@@ -1,4 +1,4 @@
-import { Col, Row, List, Tag, Typography } from "antd";
+import { Col, Row, List, Tag, Typography, Space } from "antd";
 import {
   ApiOutlined,
   ThunderboltOutlined,
@@ -7,6 +7,7 @@ import {
 } from "@ant-design/icons";
 import { StatsCard } from "../components/Dashboard/StatsCard";
 import { RequestChart } from "../components/Charts/RequestChart";
+import { StatusChart } from "../components/Charts/StatusChart";
 import { useEffect, useState } from "react";
 
 const { Title } = Typography;
@@ -29,6 +30,11 @@ const Dashboard = () => {
     { date: "Fri", count: 1290 },
     { date: "Sat", count: 1330 },
     { date: "Sun", count: 1320 },
+  ];
+
+  const statusData = [
+    { name: "Success", value: 1350 },
+    { name: "Failed", value: 100 },
   ];
 
   const recentActivity = [
@@ -117,7 +123,14 @@ const Dashboard = () => {
       <Row gutter={[16, 16]}>
         {/* Chart Column */}
         <Col xs={24} lg={16}>
-          <RequestChart data={chartData} loading={loading} />
+          <Space direction="vertical" className="w-full" size="middle">
+            <RequestChart data={chartData} loading={loading} />
+            <Row gutter={[16, 16]}>
+              <Col span={24}>
+                <StatusChart data={statusData} loading={loading} />
+              </Col>
+            </Row>
+          </Space>
         </Col>
 
         {/* Activity Column */}
