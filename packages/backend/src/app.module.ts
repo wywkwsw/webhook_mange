@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "./auth/auth.module";
+import { validateEnv } from "./config/env.validation";
 import { HookModule } from "./hook/hook.module";
 import { UserModule } from "./user/user.module";
 import { WebhookModule } from "./webhook/webhook.module";
@@ -11,6 +12,7 @@ import { WebhookLogModule } from "./webhook-log/webhook-log.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: validateEnv,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

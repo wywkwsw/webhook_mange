@@ -1,10 +1,12 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { RequestMethod, ValidationPipe } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
   app.enableShutdownHooks();
 
@@ -23,8 +25,25 @@ async function bootstrap() {
     }),
   );
 
-  // 启用 CORS
-  app.enableCors();
+  // 启用 CORS（生产环境建议显式配置 CORS_ORIGIN）
+  const nodeEnv = configService.get<string>("NODE_ENV") ?? "development";
+  const isProd = nodeEnv === "production";
+  const corsOriginRaw =
+    configService.get<string>("CORS_ORIGIN") ?? configService.get<string>("CORS_ORIGINS");
+  const corsOrigins = (corsOriginRaw ?? "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  const allowAllOrigins = corsOrigins.includes("*") || (!isProd && corsOrigins.length === 0);
+  const corsOriginSet = new Set(corsOrigins.filter((v) => v !== "*"));
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowAllOrigins) return callback(null, true);
+      return callback(null, corsOriginSet.has(origin));
+    },
+  });
 
   // Swagger 文档
   const config = new DocumentBuilder()
