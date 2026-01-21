@@ -18,6 +18,7 @@ import {
   CopyOutlined,
   LinkOutlined,
   SearchOutlined,
+  SendOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useWebhookStore } from "../store/webhookStore";
@@ -72,27 +73,13 @@ const WebhookList = () => {
     }
   };
 
-  const handleSubmit = async (values: { name: string; path: string; secret?: string }) => {
+  const handleSubmit = async (values: CreateWebhookDto | UpdateWebhookDto) => {
     try {
       if (editingWebhook) {
-        const updateData: UpdateWebhookDto = {
-          name: values.name,
-          path: values.path,
-        };
-        if (values.secret) {
-          updateData.secret = values.secret;
-        }
-        await updateWebhook(editingWebhook.id, updateData);
+        await updateWebhook(editingWebhook.id, values as UpdateWebhookDto);
         message.success("更新成功");
       } else {
-        const createData: CreateWebhookDto = {
-          name: values.name,
-          path: values.path,
-        };
-        if (values.secret) {
-          createData.secret = values.secret;
-        }
-        await createWebhook(createData);
+        await createWebhook(values as CreateWebhookDto);
         message.success("创建成功");
       }
       setIsModalOpen(false);
@@ -157,6 +144,21 @@ const WebhookList = () => {
       key: "secret",
       render: (secret: string | null) => (
         <span className="text-secondary">{secret ? "已设置" : "无"}</span>
+      ),
+    },
+    {
+      title: "转发",
+      key: "forward",
+      render: (_: unknown, record: Webhook) => (
+        record.forwardConfig?.enabled ? (
+          <Tooltip title={record.forwardConfig.targetUrl}>
+            <Tag icon={<SendOutlined />} color="cyan">
+              已配置
+            </Tag>
+          </Tooltip>
+        ) : (
+          <span className="text-muted">未配置</span>
+        )
       ),
     },
     {
@@ -259,6 +261,7 @@ const WebhookList = () => {
         onCancel={() => setIsModalOpen(false)}
         footer={null}
         destroyOnClose
+        width={600}
       >
         <WebhookForm
           initialValues={
@@ -267,6 +270,8 @@ const WebhookList = () => {
                   name: editingWebhook.name,
                   path: editingWebhook.path,
                   secret: editingWebhook.secret || undefined,
+                  isActive: editingWebhook.isActive,
+                  forwardConfig: editingWebhook.forwardConfig || undefined,
                 }
               : undefined
           }

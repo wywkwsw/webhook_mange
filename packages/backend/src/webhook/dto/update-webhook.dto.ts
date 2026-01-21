@@ -7,7 +7,10 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateNested,
 } from "class-validator";
+import { Type } from "class-transformer";
+import { ForwardConfigDto } from "./create-webhook.dto";
 
 export class UpdateWebhookDto {
   @ApiPropertyOptional({
@@ -54,4 +57,13 @@ export class UpdateWebhookDto {
   @IsOptional()
   @IsObject()
   config?: Record<string, unknown> | null;
+
+  @ApiPropertyOptional({
+    description: "转发配置（支持传 null 清空）",
+    type: ForwardConfigDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ForwardConfigDto)
+  forwardConfig?: ForwardConfigDto | null;
 }

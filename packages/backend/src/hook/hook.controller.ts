@@ -3,6 +3,7 @@ import {
   Controller,
   HttpException,
   HttpCode,
+  Logger,
   NotFoundException,
   Param,
   Req,
@@ -13,6 +14,7 @@ import { timingSafeEqual } from "node:crypto";
 import { Request } from "express";
 import { WebhookService } from "../webhook/webhook.service";
 import { WebhookLogService } from "../webhook-log/webhook-log.service";
+import { ForwardService } from "../forward/forward.service";
 
 function readQuerySecret(value: unknown): string | null {
   if (typeof value === "string") return value;
@@ -61,9 +63,12 @@ function normalizeHeaders(headers: Record<string, unknown>): Record<string, stri
 @ApiExcludeController()
 @Controller("hook")
 export class HookController {
+  private readonly logger = new Logger(HookController.name);
+
   constructor(
     private readonly webhookService: WebhookService,
     private readonly webhookLogService: WebhookLogService,
+    private readonly forwardService: ForwardService,
   ) {}
 
   @All(":path")
@@ -108,7 +113,38 @@ export class HookController {
         }
       }
 
-      const response = { ok: true };
+      // 执行转发（如果配置了）
+      let forwardResult = null;
+      if (webhook.forwardConfig?.enabled && webhook.forwardConfig?.targetUrl) {
+        this.logger.log(`Forwarding webhook "${webhook.name}" to ${webhook.forwardConfig.targetUrl}`);
+
+        forwardResult = await this.forwardService.forward(webhook.forwardConfig, {
+          method: requestPayload.method,
+          headers: requestPayload.headers,
+          payload: requestPayload.payload,
+          webhookName: webhook.name,
+          webhookPath: webhook.path,
+        });
+
+        if (forwardResult.success) {
+          this.logger.log(`Forward success for webhook "${webhook.name}"`);
+        } else {
+          this.logger.warn(`Forward failed for webhook "${webhook.name}": ${forwardResult.error}`);
+        }
+      }
+
+      const response = {
+        ok: true,
+        forwarded: forwardResult
+          ? {
+              success: forwardResult.success,
+              statusCode: forwardResult.statusCode,
+              duration: forwardResult.duration,
+              error: forwardResult.error,
+            }
+          : null,
+      };
+
       await writeLog({ statusCode: 200, response });
       return response;
     } catch (error) {
