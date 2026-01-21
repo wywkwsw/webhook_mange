@@ -10,13 +10,16 @@ import {
 } from "class-validator";
 
 export class CreateWebhookDto {
-  @ApiProperty({ example: "GitHub" })
+  @ApiProperty({ example: "GitHub", description: "Webhook 名称（1-100 字符）" })
   @IsString()
   @MinLength(1)
   @MaxLength(100)
   name: string;
 
-  @ApiProperty({ example: "github" })
+  @ApiProperty({
+    example: "github",
+    description: "Webhook 路径（URL-safe，唯一）",
+  })
   @IsString()
   @MinLength(1)
   @MaxLength(100)
@@ -25,18 +28,25 @@ export class CreateWebhookDto {
   })
   path: string;
 
-  @ApiPropertyOptional({ example: "my_secret" })
+  @ApiPropertyOptional({ example: "my_secret", description: "签名密钥（可选）" })
   @IsOptional()
   @IsString()
   @MaxLength(200)
   secret?: string;
 
-  @ApiPropertyOptional({ example: true, default: true })
+  @ApiPropertyOptional({
+    example: true,
+    default: true,
+    description: "是否启用（默认 true）",
+  })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiPropertyOptional({ example: { event: "push" } })
+  @ApiPropertyOptional({
+    example: { event: "push" },
+    description: "自定义配置（可选 JSON）",
+  })
   @IsOptional()
   @IsObject()
   config?: Record<string, unknown>;

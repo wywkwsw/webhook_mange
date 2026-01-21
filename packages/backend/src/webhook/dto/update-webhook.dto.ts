@@ -10,14 +10,20 @@ import {
 } from "class-validator";
 
 export class UpdateWebhookDto {
-  @ApiPropertyOptional({ example: "GitHub" })
+  @ApiPropertyOptional({
+    example: "GitHub",
+    description: "Webhook 名称（1-100 字符）",
+  })
   @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(100)
   name?: string;
 
-  @ApiPropertyOptional({ example: "github" })
+  @ApiPropertyOptional({
+    example: "github",
+    description: "Webhook 路径（URL-safe，唯一）",
+  })
   @IsOptional()
   @IsString()
   @MinLength(1)
@@ -27,18 +33,24 @@ export class UpdateWebhookDto {
   })
   path?: string;
 
-  @ApiPropertyOptional({ example: "my_secret" })
+  @ApiPropertyOptional({
+    example: "my_secret",
+    description: "签名密钥（可选，支持传 null 清空）",
+  })
   @IsOptional()
   @IsString()
   @MaxLength(200)
   secret?: string | null;
 
-  @ApiPropertyOptional({ example: true })
+  @ApiPropertyOptional({ example: true, description: "是否启用" })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiPropertyOptional({ example: { event: "push" } })
+  @ApiPropertyOptional({
+    example: { event: "push" },
+    description: "自定义配置（可选，支持传 null 清空）",
+  })
   @IsOptional()
   @IsObject()
   config?: Record<string, unknown> | null;
