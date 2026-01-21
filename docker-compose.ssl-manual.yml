@@ -1,0 +1,101 @@
+# ========================================
+# Docker Compose - Webhook Manager (手动证书)
+# ========================================
+#
+# 使用已有的 SSL 证书文件
+#
+# Usage:
+#   1. 将证书文件放到 ./ssl/ 目录:
+#      - ./ssl/privkey.pem  (私钥)
+#      - ./ssl/fullchain.pem (证书链)
+#
+#   2. 启动服务:
+#      docker compose -f docker-compose.ssl-manual.yml up -d
+#
+# ========================================
+
+services:
+  # ----------------------------------------
+  # PostgreSQL Database
+  # ----------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: webhook-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-webhook}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-webhook123}
+      POSTGRES_DB: ${DB_DATABASE:-webhook_manager}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USERNAME:-webhook} -d ${DB_DATABASE:-webhook_manager}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - webhook-network
+
+  # ----------------------------------------
+  # Backend - NestJS API
+  # ----------------------------------------
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: webhook-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-webhook}
+      DB_PASSWORD: ${DB_PASSWORD:-webhook123}
+      DB_DATABASE: ${DB_DATABASE:-webhook_manager}
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-please}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS:-10}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    networks:
+      - webhook-network
+
+  # ----------------------------------------
+  # Frontend + Nginx (with SSL)
+  # ----------------------------------------
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile.ssl
+    container_name: webhook-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - webhook-network
+
+# ----------------------------------------
+# Volumes
+# ----------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+
+# ----------------------------------------
+# Networks
+# ----------------------------------------
+networks:
+  webhook-network:
+    driver: bridge

@@ -239,19 +239,75 @@ CORS_ORIGIN=https://your-domain.com
 # 注释掉或删除 DB_PORT_EXPOSE
 ```
 
-### 2. 配置 HTTPS
+### 2. 配置 HTTPS（重要！）
 
-推荐使用 Nginx + Let's Encrypt：
+TradingView 等服务的 Webhook 需要 HTTPS。提供三种方案：
+
+#### 方案一：Traefik + Let's Encrypt（推荐）
+
+自动获取和续期 SSL 证书：
 
 ```bash
-# 安装 Certbot
-sudo apt install certbot python3-certbot-nginx -y
+# 1. 设置环境变量
+cat >> .env << EOF
+DOMAIN=your-domain.com
+ACME_EMAIL=your-email@example.com
+EOF
 
-# 获取证书
-sudo certbot --nginx -d your-domain.com
+# 2. 使用 HTTPS 配置启动
+docker compose -f docker-compose.https.yml up -d
+
+# 3. 验证
+curl https://your-domain.com/api/docs
 ```
 
-或者在 docker-compose.yml 中添加 Traefik/Caddy 作为反向代理。
+**优点**：自动获取证书、自动续期、零配置  
+**要求**：域名已正确解析到服务器 IP
+
+#### 方案二：使用已有证书
+
+如果你已有 SSL 证书（如从 Certbot/宝塔获取）：
+
+```bash
+# 1. 创建证书目录并复制证书
+mkdir -p ssl
+cp /path/to/your/privkey.pem ./ssl/privkey.pem
+cp /path/to/your/fullchain.pem ./ssl/fullchain.pem
+
+# 2. 使用手动证书配置启动
+docker compose -f docker-compose.ssl-manual.yml up -d
+```
+
+**证书文件说明**：
+
+- `privkey.pem` - 私钥文件
+- `fullchain.pem` - 完整证书链（包含中间证书）
+
+#### 方案三：宝塔面板反向代理
+
+如果使用宝塔面板：
+
+```bash
+# 1. HTTP 模式启动服务
+docker compose up -d
+
+# 2. 在宝塔中创建网站，配置反向代理到 localhost:80
+# 3. 在宝塔中申请 SSL 证书
+```
+
+#### Webhook 接收地址
+
+部署完成后，你的 Webhook 接收地址为：
+
+```
+https://your-domain.com/hook/<path>
+```
+
+示例 - TradingView 配置：
+
+```
+Webhook URL: https://your-domain.com/hook/tradingview
+```
 
 ### 3. 配置防火墙
 

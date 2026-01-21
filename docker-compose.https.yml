@@ -1,0 +1,164 @@
+# ========================================
+# Docker Compose - Webhook Manager (HTTPS)
+# ========================================
+#
+# 使用 Traefik 反向代理 + Let's Encrypt 自动证书
+#
+# Usage:
+#   启动服务:  docker compose -f docker-compose.https.yml up -d
+#   查看日志:  docker compose -f docker-compose.https.yml logs -f
+#   停止服务:  docker compose -f docker-compose.https.yml down
+#
+# 环境变量:
+#   DOMAIN=your-domain.com
+#   ACME_EMAIL=your-email@example.com
+#
+# ========================================
+
+services:
+  # ----------------------------------------
+  # Traefik - Reverse Proxy & SSL
+  # ----------------------------------------
+  traefik:
+    image: traefik:v3.0
+    container_name: webhook-traefik
+    restart: unless-stopped
+    command:
+      # API Dashboard
+      - "--api.dashboard=true"
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=webhook-network"
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # HTTP to HTTPS redirect
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Let's Encrypt
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      # Uncomment for testing (staging server)
+      # - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
+    networks:
+      - webhook-network
+    labels:
+      # Dashboard (optional, can remove for production)
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN:-localhost}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH:-}"
+
+  # ----------------------------------------
+  # PostgreSQL Database
+  # ----------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: webhook-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-webhook}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-webhook123}
+      POSTGRES_DB: ${DB_DATABASE:-webhook_manager}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USERNAME:-webhook} -d ${DB_DATABASE:-webhook_manager}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - webhook-network
+
+  # ----------------------------------------
+  # Backend - NestJS API
+  # ----------------------------------------
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: webhook-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-webhook}
+      DB_PASSWORD: ${DB_PASSWORD:-webhook123}
+      DB_DATABASE: ${DB_DATABASE:-webhook_manager}
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-please}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS:-10}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    networks:
+      - webhook-network
+    labels:
+      - "traefik.enable=true"
+      # API routes
+      - "traefik.http.routers.backend-api.rule=Host(`${DOMAIN:-localhost}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend-api.entrypoints=websecure"
+      - "traefik.http.routers.backend-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-api.service=backend-service"
+      # Hook routes (webhook receiver)
+      - "traefik.http.routers.backend-hook.rule=Host(`${DOMAIN:-localhost}`) && PathPrefix(`/hook`)"
+      - "traefik.http.routers.backend-hook.entrypoints=websecure"
+      - "traefik.http.routers.backend-hook.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-hook.service=backend-service"
+      # Service
+      - "traefik.http.services.backend-service.loadbalancer.server.port=3000"
+
+  # ----------------------------------------
+  # Frontend - React + Nginx
+  # ----------------------------------------
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile
+    container_name: webhook-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - webhook-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend.service=frontend-service"
+      - "traefik.http.services.frontend-service.loadbalancer.server.port=80"
+
+# ----------------------------------------
+# Volumes
+# ----------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  traefik_certs:
+    driver: local
+
+# ----------------------------------------
+# Networks
+# ----------------------------------------
+networks:
+  webhook-network:
+    driver: bridge

@@ -6,3 +6,9 @@ coverage
 !.env.example
 .DS_Store
 .playwright-mcp
+
+# SSL certificates (keep README only)
+ssl/*.pem
+ssl/*.key
+ssl/*.crt
+!ssl/README.md
