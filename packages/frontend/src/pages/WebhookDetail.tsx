@@ -70,7 +70,7 @@ const WebhookDetail = () => {
       key: "receivedAt",
       width: 180,
       render: (time: string) => (
-        <span className="text-gray-300 mono text-sm">
+        <span className="text-gray-700 mono text-sm">
           {dayjs(time).format("YYYY-MM-DD HH:mm:ss")}
         </span>
       ),
@@ -81,7 +81,7 @@ const WebhookDetail = () => {
       key: "method",
       width: 100,
       render: (method: string) => (
-        <Tag color={method === "POST" ? "cyan" : method === "GET" ? "blue" : "orange"}>
+        <Tag color={method === "POST" ? "blue" : method === "GET" ? "cyan" : "orange"}>
           {method}
         </Tag>
       ),
@@ -109,7 +109,6 @@ const WebhookDetail = () => {
           type="link" 
           size="small" 
           onClick={() => setSelectedLog(record)}
-          className="text-cyan-400"
         >
           查看详情
         </Button>
@@ -143,24 +142,23 @@ const WebhookDetail = () => {
         <Button 
           icon={<ArrowLeftOutlined />} 
           onClick={() => navigate("/webhooks")}
-          className="text-gray-400 hover:text-cyan-400"
         >
           返回
         </Button>
         <div className="flex items-center gap-3">
           <div 
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)' }}
+            style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}
           >
             <LinkOutlined className="text-white text-lg" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">{currentWebhook.name}</h1>
-            <p className="text-gray-400 text-sm mono">/{currentWebhook.path}</p>
+            <h1 className="text-2xl font-bold text-gray-900">{currentWebhook.name}</h1>
+            <p className="text-gray-500 text-sm mono">/{currentWebhook.path}</p>
           </div>
         </div>
         <Tag 
-          color={currentWebhook.isActive ? "cyan" : "default"}
+          color={currentWebhook.isActive ? "blue" : "default"}
           className="ml-2"
         >
           {currentWebhook.isActive ? "已启用" : "已禁用"}
@@ -168,34 +166,41 @@ const WebhookDetail = () => {
       </div>
 
       {/* 详情卡片 */}
-      <div className="chart-container">
-        <h3 className="text-lg font-semibold text-white mb-4">基本信息</h3>
+      <div className="page-card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">基本信息</h3>
         <Descriptions 
           column={2} 
-          labelStyle={{ color: '#9ca3af' }}
-          contentStyle={{ color: '#f3f4f6' }}
+          bordered
+          labelStyle={{ 
+            background: 'var(--bg-surface)', 
+            color: 'var(--text-secondary)',
+            fontWeight: 500,
+          }}
+          contentStyle={{ 
+            background: 'var(--bg-elevated)', 
+            color: 'var(--text-primary)',
+          }}
         >
           <Descriptions.Item label="ID">
-            <span className="mono text-sm">{currentWebhook.id}</span>
+            <span className="mono text-sm text-gray-700">{currentWebhook.id}</span>
           </Descriptions.Item>
           <Descriptions.Item label="路径">
-            <span className="mono">/{currentWebhook.path}</span>
+            <span className="mono text-gray-700">/{currentWebhook.path}</span>
           </Descriptions.Item>
           <Descriptions.Item label="接收地址" span={2}>
             <Space>
-              <Text code className="text-cyan-400 mono">{getWebhookUrl()}</Text>
+              <Text code className="mono text-blue-600">{getWebhookUrl()}</Text>
               <Button
                 type="text"
                 size="small"
                 icon={<CopyOutlined />}
                 onClick={() => copyToClipboard(getWebhookUrl())}
-                className="text-gray-400 hover:text-cyan-400"
               />
             </Space>
           </Descriptions.Item>
           <Descriptions.Item label="密钥验证">
             {currentWebhook.secret ? (
-              <Tag icon={<LockOutlined />} color="cyan">
+              <Tag icon={<LockOutlined />} color="blue">
                 已设置
               </Tag>
             ) : (
@@ -203,7 +208,7 @@ const WebhookDetail = () => {
             )}
           </Descriptions.Item>
           <Descriptions.Item label="创建时间">
-            <span className="mono text-sm">
+            <span className="mono text-sm text-gray-700">
               {dayjs(currentWebhook.createdAt).format("YYYY-MM-DD HH:mm:ss")}
             </span>
           </Descriptions.Item>
@@ -211,13 +216,12 @@ const WebhookDetail = () => {
       </div>
 
       {/* 请求日志 */}
-      <div className="chart-container">
+      <div className="page-card">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">请求日志</h3>
+          <h3 className="text-lg font-semibold text-gray-900">请求日志</h3>
           <Button 
             icon={<ReloadOutlined />} 
             onClick={refreshLogs}
-            className="text-gray-400 hover:text-cyan-400"
           >
             刷新
           </Button>
@@ -249,29 +253,39 @@ const WebhookDetail = () => {
               column={2} 
               bordered 
               size="small"
-              labelStyle={{ background: 'rgba(6, 182, 212, 0.1)' }}
+              labelStyle={{ 
+                background: 'var(--bg-surface)',
+                color: 'var(--text-secondary)',
+              }}
+              contentStyle={{ 
+                color: 'var(--text-primary)',
+              }}
             >
-              <Descriptions.Item label="请求方法">{selectedLog.method}</Descriptions.Item>
+              <Descriptions.Item label="请求方法">
+                <span className="text-gray-900">{selectedLog.method}</span>
+              </Descriptions.Item>
               <Descriptions.Item label="状态码">
                 <Tag color={selectedLog.statusCode < 400 ? "success" : "error"}>
                   {selectedLog.statusCode}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="接收时间" span={2}>
-                {dayjs(selectedLog.receivedAt).format("YYYY-MM-DD HH:mm:ss")}
+                <span className="text-gray-700">
+                  {dayjs(selectedLog.receivedAt).format("YYYY-MM-DD HH:mm:ss")}
+                </span>
               </Descriptions.Item>
             </Descriptions>
 
             <div>
-              <Text strong className="text-gray-300">请求头:</Text>
-              <pre className="bg-gray-800 p-3 rounded-lg mt-2 text-xs overflow-auto max-h-40 text-gray-300 mono border border-gray-700">
+              <Text strong className="text-gray-700">请求头:</Text>
+              <pre className="bg-gray-50 p-3 rounded-lg mt-2 text-xs overflow-auto max-h-40 text-gray-800 mono border border-gray-200">
                 {JSON.stringify(selectedLog.headers, null, 2)}
               </pre>
             </div>
 
             <div>
-              <Text strong className="text-gray-300">请求体:</Text>
-              <pre className="bg-gray-800 p-3 rounded-lg mt-2 text-xs overflow-auto max-h-40 text-gray-300 mono border border-gray-700">
+              <Text strong className="text-gray-700">请求体:</Text>
+              <pre className="bg-gray-50 p-3 rounded-lg mt-2 text-xs overflow-auto max-h-40 text-gray-800 mono border border-gray-200">
                 {selectedLog.payload
                   ? JSON.stringify(selectedLog.payload, null, 2)
                   : "无请求体"}
@@ -279,8 +293,8 @@ const WebhookDetail = () => {
             </div>
 
             <div>
-              <Text strong className="text-gray-300">响应内容:</Text>
-              <pre className="bg-gray-800 p-3 rounded-lg mt-2 text-xs overflow-auto max-h-40 text-gray-300 mono border border-gray-700">
+              <Text strong className="text-gray-700">响应内容:</Text>
+              <pre className="bg-gray-50 p-3 rounded-lg mt-2 text-xs overflow-auto max-h-40 text-gray-800 mono border border-gray-200">
                 {selectedLog.response
                   ? JSON.stringify(selectedLog.response, null, 2)
                   : "无响应内容"}

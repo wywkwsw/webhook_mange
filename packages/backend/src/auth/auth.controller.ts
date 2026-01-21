@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Post, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -13,6 +13,20 @@ import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
+import { ChangePasswordDto } from "./dto/change-password.dto";
+
+type AuthenticatedUser = {
+  userId: string;
+  username: string;
+};
+
+function getUserId(req: Request): string {
+  const user = req.user as AuthenticatedUser | undefined;
+  if (!user?.userId) {
+    throw new UnauthorizedException();
+  }
+  return user.userId;
+}
 
 @ApiTags("auth")
 @Controller("auth")
@@ -58,5 +72,20 @@ export class AuthController {
   @Get("profile")
   async profile(@Req() req: Request) {
     return req.user;
+  }
+
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "修改密码" })
+  @ApiOkResponse({
+    description: "密码修改成功",
+    schema: { example: { message: "Password changed successfully" } },
+  })
+  @ApiUnauthorizedResponse({ description: "当前密码错误或 JWT 无效" })
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  @Post("change-password")
+  async changePassword(@Req() req: Request, @Body() body: ChangePasswordDto) {
+    const userId = getUserId(req);
+    return await this.authService.changePassword(userId, body);
   }
 }

@@ -54,7 +54,8 @@ body {
   min-height: 100vh;
 }
 
-.ant-layout-sider {
+/* 默认侧边栏样式 - 可被组件内联样式覆盖 */
+.ant-layout-sider:not(.sidebar-container) {
   background: var(--bg-elevated) !important;
   border-right: 1px solid var(--border-default) !important;
 }
@@ -64,7 +65,7 @@ body {
   border-bottom: 1px solid var(--border-default) !important;
 }
 
-/* 菜单 */
+/* 菜单 - 浅色主题 */
 .ant-menu-light {
   background: transparent !important;
   border-inline-end: none !important;
@@ -84,6 +85,82 @@ body {
 .ant-menu-light .ant-menu-item-selected {
   background: var(--color-primary) !important;
   color: white !important;
+}
+
+/* 侧边栏菜单 - 深色主题 */
+.sidebar-container .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-menu.ant-menu {
+  background: transparent !important;
+  border-inline-end: none !important;
+  padding: 0 !important;
+}
+
+.sidebar-menu.ant-menu .ant-menu-item {
+  color: rgba(255, 255, 255, 0.65) !important;
+  margin: 6px 12px !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  border-radius: 10px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  width: calc(100% - 24px) !important;
+}
+
+.sidebar-menu.ant-menu .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: white !important;
+}
+
+.sidebar-menu.ant-menu .ant-menu-item-selected {
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4) !important;
+}
+
+.sidebar-menu.ant-menu .ant-menu-item-selected:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%) !important;
+}
+
+.sidebar-menu.ant-menu .ant-menu-item .anticon {
+  font-size: 18px !important;
+  min-width: 18px !important;
+}
+
+.sidebar-menu.ant-menu .ant-menu-title-content {
+  margin-left: 10px !important;
+  flex: 1 !important;
+}
+
+/* 侧边栏折叠时的菜单样式 */
+.ant-layout-sider-collapsed .sidebar-menu.ant-menu .ant-menu-item {
+  padding: 0 !important;
+  margin: 6px auto !important;
+  width: 48px !important;
+  height: 48px !important;
+  line-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.ant-layout-sider-collapsed .sidebar-menu.ant-menu .ant-menu-item .anticon {
+  margin: 0 !important;
+  font-size: 20px !important;
+}
+
+.ant-layout-sider-collapsed .sidebar-menu.ant-menu .ant-menu-title-content {
+  display: none !important;
+  margin: 0 !important;
+  width: 0 !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
 }
 
 /* 表格 */

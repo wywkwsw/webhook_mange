@@ -42,4 +42,16 @@ export class UserService {
       .where("user.username = :username", { username })
       .getOne();
   }
+
+  async findById(id: string): Promise<User | null> {
+    return await this.userRepository
+      .createQueryBuilder("user")
+      .addSelect("user.passwordHash")
+      .where("user.id = :id", { id })
+      .getOne();
+  }
+
+  async updatePassword(userId: string, newPasswordHash: string): Promise<void> {
+    await this.userRepository.update(userId, { passwordHash: newPasswordHash });
+  }
 }

@@ -92,15 +92,6 @@ const Login = () => {
           </Form.Item>
         </Form>
 
-        {/* 提示信息 */}
-        <div
-          className="mt-6 p-4 rounded-lg text-center"
-          style={{ background: "#f1f5f9" }}
-        >
-          <p className="text-sm m-0" style={{ color: "#64748b" }}>
-            演示账号：admin / admin123
-          </p>
-        </div>
       </div>
     </div>
   );

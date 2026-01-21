@@ -3,6 +3,7 @@ import { AppModule } from "./app.module";
 import { RequestMethod, ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { AuthService } from "./auth/auth.service";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -58,6 +59,10 @@ async function bootstrap() {
   const portRaw = process.env.PORT ?? "3000";
   const port = Number.parseInt(portRaw, 10);
   const finalPort = Number.isNaN(port) ? 3000 : port;
+
+  // 创建默认管理员账户
+  const authService = app.get(AuthService);
+  await authService.ensureDefaultAdmin();
 
   await app.listen(finalPort);
   console.log(`🚀 Server running on http://localhost:${finalPort}`);

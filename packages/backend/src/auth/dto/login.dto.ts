@@ -7,8 +7,8 @@ export class LoginDto {
   @MinLength(3)
   username: string;
 
-  @ApiProperty({ example: "password123", description: "密码（最少 6 个字符）" })
+  @ApiProperty({ example: "password123", description: "密码" })
   @IsString()
-  @MinLength(6)
+  @MinLength(1)
   password: string;
 }
