@@ -1,0 +1,98 @@
+# ========================================
+# Docker Compose - Webhook Manager
+# ========================================
+#
+# Usage:
+#   启动所有服务:  docker compose up -d
+#   查看日志:      docker compose logs -f
+#   停止服务:      docker compose down
+#   重建服务:      docker compose up -d --build
+#
+# ========================================
+
+services:
+  # ----------------------------------------
+  # PostgreSQL Database
+  # ----------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: webhook-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-webhook}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-webhook123}
+      POSTGRES_DB: ${DB_DATABASE:-webhook_manager}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT_EXPOSE:-5432}:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USERNAME:-webhook} -d ${DB_DATABASE:-webhook_manager}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - webhook-network
+
+  # ----------------------------------------
+  # Backend - NestJS API
+  # ----------------------------------------
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: webhook-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-webhook}
+      DB_PASSWORD: ${DB_PASSWORD:-webhook123}
+      DB_DATABASE: ${DB_DATABASE:-webhook_manager}
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-please}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS:-10}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    ports:
+      - "${BACKEND_PORT_EXPOSE:-3000}:3000"
+    networks:
+      - webhook-network
+
+  # ----------------------------------------
+  # Frontend - React + Nginx
+  # ----------------------------------------
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile
+    container_name: webhook-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks:
+      - webhook-network
+
+# ----------------------------------------
+# Volumes
+# ----------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+
+# ----------------------------------------
+# Networks
+# ----------------------------------------
+networks:
+  webhook-network:
+    driver: bridge

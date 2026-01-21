@@ -25,23 +25,23 @@
 
 系统启动时会自动创建默认管理员账户（如果不存在）：
 
-| 字段 | 值 |
-|------|------|
+| 字段   | 值      |
+| ------ | ------- |
 | 用户名 | `admin` |
-| 密码 | `admin` |
+| 密码   | `admin` |
 
 > ⚠️ **安全警告**：首次登录后请立即修改默认密码！
 
 ### 技术栈
 
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| NestJS | ^11.0.1 | 后端框架 |
-| TypeORM | ^0.3.20 | ORM 数据库操作 |
-| PostgreSQL | 16+ | 数据库 |
-| Passport | ^0.7.0 | 认证中间件 |
-| JWT | - | 令牌认证 |
-| bcrypt | ^5.1.1 | 密码加密 |
+| 技术       | 版本    | 用途           |
+| ---------- | ------- | -------------- |
+| NestJS     | ^11.0.1 | 后端框架       |
+| TypeORM    | ^0.3.20 | ORM 数据库操作 |
+| PostgreSQL | 16+     | 数据库         |
+| Passport   | ^0.7.0  | 认证中间件     |
+| JWT        | -       | 令牌认证       |
+| bcrypt     | ^5.1.1  | 密码加密       |
 
 ---
 
@@ -78,17 +78,17 @@ CORS_ORIGIN=http://localhost:5173
 
 #### 环境变量说明
 
-| 变量名 | 必填 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `PORT` | 否 | 3000 | 服务监听端口 (1-65535) |
-| `DB_HOST` | 是 | - | PostgreSQL 主机地址 |
-| `DB_PORT` | 否 | 5432 | PostgreSQL 端口 |
-| `DB_USERNAME` | 是 | - | 数据库用户名 |
-| `DB_PASSWORD` | 是 | - | 数据库密码 |
-| `DB_DATABASE` | 是 | - | 数据库名称 |
-| `JWT_SECRET` | 是 | - | JWT 签名密钥 (生产环境请使用强密钥) |
-| `JWT_EXPIRES_IN` | 否 | 7d | JWT 过期时间 |
-| `CORS_ORIGIN` | 否 | * | 允许的跨域来源 |
+| 变量名           | 必填 | 默认值 | 说明                                |
+| ---------------- | ---- | ------ | ----------------------------------- |
+| `PORT`           | 否   | 3000   | 服务监听端口 (1-65535)              |
+| `DB_HOST`        | 是   | -      | PostgreSQL 主机地址                 |
+| `DB_PORT`        | 否   | 5432   | PostgreSQL 端口                     |
+| `DB_USERNAME`    | 是   | -      | 数据库用户名                        |
+| `DB_PASSWORD`    | 是   | -      | 数据库密码                          |
+| `DB_DATABASE`    | 是   | -      | 数据库名称                          |
+| `JWT_SECRET`     | 是   | -      | JWT 签名密钥 (生产环境请使用强密钥) |
+| `JWT_EXPIRES_IN` | 否   | 7d     | JWT 过期时间                        |
+| `CORS_ORIGIN`    | 否   | \*     | 允许的跨域来源                      |
 
 ---
 
@@ -185,6 +185,7 @@ Content-Type: application/json
 ```
 
 **响应示例**:
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -208,6 +209,7 @@ Content-Type: application/json
 ```
 
 **响应示例**:
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -226,6 +228,7 @@ Authorization: Bearer <token>
 ```
 
 **响应示例**:
+
 ```json
 {
   "userId": "550e8400-e29b-41d4-a716-446655440000",
@@ -253,6 +256,7 @@ Content-Type: application/json
 | `newPassword` | string | 是 | 新密码（最少 6 个字符） |
 
 **响应示例**:
+
 ```json
 {
   "message": "Password changed successfully"
@@ -260,6 +264,7 @@ Content-Type: application/json
 ```
 
 **错误响应**:
+
 - `401 Unauthorized`: 当前密码不正确或 JWT 无效
 
 ### Webhook 管理接口 (`/api/webhooks`)
@@ -280,6 +285,7 @@ Authorization: Bearer <token>
 | `limit` | number | 20 | 每页数量 |
 
 **响应示例**:
+
 ```json
 {
   "items": [
@@ -326,6 +332,7 @@ Content-Type: application/json
 | `config` | object | 否 | 自定义配置 |
 
 **响应示例**:
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -367,6 +374,7 @@ Authorization: Bearer <token>
 ```
 
 **响应示例**:
+
 ```json
 {
   "deleted": true
@@ -383,6 +391,7 @@ Authorization: Bearer <token>
 ```
 
 **响应示例**:
+
 ```json
 [
   {
@@ -417,10 +426,12 @@ Content-Type: application/json
 ```
 
 **密钥验证**（如果 Webhook 设置了密钥）:
+
 - 方式一：请求头 `x-webhook-secret: your-secret`
 - 方式二：查询参数 `?secret=your-secret`
 
 **响应示例**:
+
 ```json
 {
   "ok": true
@@ -428,6 +439,7 @@ Content-Type: application/json
 ```
 
 **错误响应**:
+
 - `404 Not Found`: Webhook 不存在或未启用
 - `401 Unauthorized`: 密钥验证失败
 
@@ -439,41 +451,41 @@ Content-Type: application/json
 
 #### User 用户表
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | UUID | 主键 |
-| username | VARCHAR | 用户名 (唯一) |
-| password | VARCHAR | 密码哈希 |
-| email | VARCHAR | 邮箱 (可选) |
-| createdAt | TIMESTAMP | 创建时间 |
-| updatedAt | TIMESTAMP | 更新时间 |
+| 字段      | 类型      | 说明          |
+| --------- | --------- | ------------- |
+| id        | UUID      | 主键          |
+| username  | VARCHAR   | 用户名 (唯一) |
+| password  | VARCHAR   | 密码哈希      |
+| email     | VARCHAR   | 邮箱 (可选)   |
+| createdAt | TIMESTAMP | 创建时间      |
+| updatedAt | TIMESTAMP | 更新时间      |
 
 #### Webhook 表
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | UUID | 主键 |
-| userId | UUID | 所属用户 ID |
-| name | VARCHAR | 名称 |
-| path | VARCHAR | 路径标识 (唯一) |
-| secret | VARCHAR | 验证密钥 (可选) |
-| isActive | BOOLEAN | 是否启用 |
-| config | JSONB | 配置信息 |
-| createdAt | TIMESTAMP | 创建时间 |
-| updatedAt | TIMESTAMP | 更新时间 |
+| 字段      | 类型      | 说明            |
+| --------- | --------- | --------------- |
+| id        | UUID      | 主键            |
+| userId    | UUID      | 所属用户 ID     |
+| name      | VARCHAR   | 名称            |
+| path      | VARCHAR   | 路径标识 (唯一) |
+| secret    | VARCHAR   | 验证密钥 (可选) |
+| isActive  | BOOLEAN   | 是否启用        |
+| config    | JSONB     | 配置信息        |
+| createdAt | TIMESTAMP | 创建时间        |
+| updatedAt | TIMESTAMP | 更新时间        |
 
 #### WebhookLog 日志表
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | UUID | 主键 |
-| webhookId | UUID | 所属 Webhook ID |
-| method | VARCHAR | 请求方法 |
-| headers | JSONB | 请求头 |
-| payload | JSONB | 请求体 |
-| statusCode | INTEGER | 响应状态码 |
-| response | JSONB | 响应内容 |
-| receivedAt | TIMESTAMP | 接收时间 |
+| 字段       | 类型      | 说明            |
+| ---------- | --------- | --------------- |
+| id         | UUID      | 主键            |
+| webhookId  | UUID      | 所属 Webhook ID |
+| method     | VARCHAR   | 请求方法        |
+| headers    | JSONB     | 请求头          |
+| payload    | JSONB     | 请求体          |
+| statusCode | INTEGER   | 响应状态码      |
+| response   | JSONB     | 响应内容        |
+| receivedAt | TIMESTAMP | 接收时间        |
 
 ### 数据库备份
 
@@ -494,6 +506,7 @@ psql webhook_manager < backup_20260121.sql
 **错误**: `Connection refused` 或 `ECONNREFUSED`
 
 **解决方案**:
+
 ```bash
 # 检查 PostgreSQL 服务状态
 brew services list | grep postgresql
@@ -507,6 +520,7 @@ brew services start postgresql@16
 **错误**: `Unauthorized` 或 `Invalid token`
 
 **检查项**:
+
 - 确认 `JWT_SECRET` 环境变量已正确设置
 - 确认 Token 未过期
 - 确认请求头格式: `Authorization: Bearer <token>`
@@ -516,6 +530,7 @@ brew services start postgresql@16
 **错误**: `Invalid salt version` 或 `bcrypt error`
 
 **解决方案**:
+
 ```bash
 # 重新安装 bcrypt
 npm uninstall bcrypt
@@ -527,6 +542,7 @@ npm install bcrypt
 **错误**: `EADDRINUSE: address already in use`
 
 **解决方案**:
+
 ```bash
 # 查找占用端口的进程
 lsof -i :3000
@@ -541,6 +557,7 @@ kill -9 <PID>
 
 **解决方案**:
 确保 `.env` 文件中 `CORS_ORIGIN` 包含前端地址：
+
 ```bash
 CORS_ORIGIN=http://localhost:5173
 ```

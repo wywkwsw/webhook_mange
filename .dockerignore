@@ -1,0 +1,44 @@
+# ========================================
+# Docker Ignore File
+# ========================================
+
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+coverage
+**/coverage
+
+# Development files
+.env
+.env.local
+.env.*.local
+*.log
+npm-debug.log*
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Test files
+test
+**/*.spec.ts
+**/*.test.ts
+jest.config.*
