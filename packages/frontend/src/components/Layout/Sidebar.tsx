@@ -30,17 +30,17 @@ export const Sidebar = ({
     {
       key: "/",
       icon: <DashboardOutlined />,
-      label: "Dashboard",
+      label: "数据概览",
     },
     {
       key: "/webhooks",
       icon: <ApiOutlined />,
-      label: "Webhooks",
+      label: "Webhook 管理",
     },
     {
       key: "/history",
       icon: <HistoryOutlined />,
-      label: "History",
+      label: "历史记录",
     },
   ];
 
@@ -61,15 +61,20 @@ export const Sidebar = ({
       onBreakpoint={() => {
         // Handled by parent
       }}
+      style={{
+        background: "#ffffff",
+        borderRight: "1px solid #e2e8f0",
+      }}
     >
       <div className="demo-logo-vertical" />
       <div
-        className={`text-white p-4 font-bold text-lg flex items-center justify-center transition-all duration-300 ${collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}
+        className={`p-4 font-bold text-lg flex items-center justify-center transition-all duration-300 ${collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}
+        style={{ color: "#3b82f6" }}
       >
-        Webhook mgr
+        Webhook 平台
       </div>
       <Menu
-        theme="dark"
+        theme="light"
         mode="inline"
         selectedKeys={selectedKeys || [location.pathname]}
         items={menuItems}

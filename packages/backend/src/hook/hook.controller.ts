@@ -80,13 +80,13 @@ export class HookController {
       payload: (req.body ?? null) as unknown,
     };
 
-    const writeLog = async (input: { statusCode: number; response: unknown | null }) => {
+    const writeLog = async (input: { statusCode: number; response: Record<string, unknown> | null }) => {
       try {
         await this.webhookLogService.create({
           webhookId: webhook.id,
           method: requestPayload.method,
           headers: requestPayload.headers,
-          payload: requestPayload.payload,
+          payload: requestPayload.payload as Record<string, unknown> | null,
           statusCode: input.statusCode,
           response: input.response,
         });
@@ -115,7 +115,7 @@ export class HookController {
       if (error instanceof HttpException) {
         await writeLog({
           statusCode: error.getStatus(),
-          response: error.getResponse() as unknown,
+          response: error.getResponse() as Record<string, unknown>,
         });
       } else {
         await writeLog({

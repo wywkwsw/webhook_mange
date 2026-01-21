@@ -9,9 +9,9 @@ export type CreateWebhookLogInput = {
   webhookId: string;
   method: string;
   headers: Record<string, string>;
-  payload: unknown | null;
+  payload: Record<string, unknown> | null;
   statusCode: number;
-  response: unknown | null;
+  response: Record<string, unknown> | null;
 };
 
 @Injectable()

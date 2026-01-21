@@ -1,45 +1,35 @@
+import { useState, useEffect } from "react";
 import {
-  Button,
   Table,
-  Tag,
+  Button,
   Space,
-  Popconfirm,
-  Input,
   Modal,
   Switch,
-  Form,
   message,
+  Tag,
+  Card,
+  Input,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
-  SearchOutlined,
   EditOutlined,
   DeleteOutlined,
+  CopyOutlined,
   LinkOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useWebhookStore } from "../store/webhookStore";
-import { WebhookForm } from "../components/Webhooks/WebhookForm";
-import type {
-  Webhook,
-  CreateWebhookDto,
-  UpdateWebhookDto,
-} from "../types/webhook";
+import WebhookForm from "../components/Webhooks/WebhookForm";
+import type { Webhook, CreateWebhookDto, UpdateWebhookDto } from "../types/webhook";
 
 const WebhookList = () => {
-  const {
-    webhooks,
-    loading,
-    fetchWebhooks,
-    createWebhook,
-    updateWebhook,
-    deleteWebhook,
-  } = useWebhookStore();
-  const [searchText, setSearchText] = useState("");
+  const { webhooks, loading, fetchWebhooks, createWebhook, updateWebhook, deleteWebhook } =
+    useWebhookStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<Webhook | null>(null);
-  const [form] = Form.useForm();
+  const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
     fetchWebhooks();
@@ -47,167 +37,242 @@ const WebhookList = () => {
 
   const handleCreate = () => {
     setEditingWebhook(null);
-    form.resetFields();
     setIsModalOpen(true);
   };
 
   const handleEdit = (webhook: Webhook) => {
     setEditingWebhook(webhook);
-    form.setFieldsValue({
-      ...webhook,
-      status: webhook.status === "active",
-    });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      const payload = {
-        ...values,
-        status: values.status ? "active" : "inactive",
-      };
+  const handleDelete = async (id: string) => {
+    Modal.confirm({
+      title: "确认删除",
+      content: "确定要删除这个 Webhook 吗？此操作不可恢复。",
+      okText: "删除",
+      okType: "danger",
+      cancelText: "取消",
+      onOk: async () => {
+        try {
+          await deleteWebhook(id);
+          message.success("删除成功");
+        } catch {
+          message.error("删除失败");
+        }
+      },
+    });
+  };
 
-      if (editingWebhook) {
-        await updateWebhook(editingWebhook.id, payload as UpdateWebhookDto);
-        message.success("Webhook updated successfully");
-      } else {
-        await createWebhook(payload as CreateWebhookDto);
-        message.success("Webhook created successfully");
-      }
-      setIsModalOpen(false);
+  const handleStatusChange = async (webhook: Webhook, checked: boolean) => {
+    try {
+      await updateWebhook(webhook.id, { isActive: checked });
+      message.success(`Webhook 已${checked ? "启用" : "停用"}`);
     } catch {
-      // Form validation failed or API error handled by store
+      message.error("状态更新失败");
     }
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteWebhook(id);
-    message.success("Webhook deleted");
+  const handleSubmit = async (values: { name: string; path: string; secret?: string }) => {
+    try {
+      if (editingWebhook) {
+        const updateData: UpdateWebhookDto = {
+          name: values.name,
+          path: values.path,
+        };
+        if (values.secret) {
+          updateData.secret = values.secret;
+        }
+        await updateWebhook(editingWebhook.id, updateData);
+        message.success("更新成功");
+      } else {
+        const createData: CreateWebhookDto = {
+          name: values.name,
+          path: values.path,
+        };
+        if (values.secret) {
+          createData.secret = values.secret;
+        }
+        await createWebhook(createData);
+        message.success("创建成功");
+      }
+      setIsModalOpen(false);
+    } catch {
+      message.error(editingWebhook ? "更新失败" : "创建失败");
+    }
   };
 
-  const handleStatusToggle = async (webhook: Webhook) => {
-    const newStatus = webhook.status === "active" ? "inactive" : "active";
-    await updateWebhook(webhook.id, { status: newStatus });
-    message.success(`Webhook ${newStatus}`);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    message.success("已复制到剪贴板");
   };
 
   const filteredWebhooks = webhooks.filter(
     (w) =>
       w.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      w.url.toLowerCase().includes(searchText.toLowerCase()),
+      w.path.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const columns = [
     {
-      title: "Name",
+      title: "名称",
       dataIndex: "name",
       key: "name",
-      render: (text: string, record: Webhook) => (
-        <Space direction="vertical" size={0}>
-          <span className="font-medium">{text}</span>
-          <span className="text-xs text-gray-400">{record.id}</span>
-        </Space>
+      render: (name: string, record: Webhook) => (
+        <div>
+          <div className="font-medium">{name}</div>
+          <div className="text-muted text-xs">{record.path}</div>
+        </div>
       ),
     },
     {
-      title: "Method",
-      dataIndex: "method",
-      key: "method",
-      width: 100,
-      render: (method: string) => (
-        <Tag
-          color={
-            method === "GET" ? "blue" : method === "POST" ? "green" : "orange"
-          }
-        >
-          {method}
-        </Tag>
+      title: "接收地址",
+      key: "endpoint",
+      render: (_: unknown, record: Webhook) => (
+        <div className="flex items-center gap-2">
+          <code
+            className="text-xs px-2 py-1 rounded"
+            style={{
+              background: "var(--bg-surface)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            /hook/{record.path}
+          </code>
+          <Tooltip title="复制">
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() =>
+                copyToClipboard(`${window.location.origin}/hook/${record.path}`)
+              }
+            />
+          </Tooltip>
+        </div>
       ),
     },
     {
-      title: "URL",
-      dataIndex: "url",
-      key: "url",
-      ellipsis: true,
-      render: (url: string) => <span className="text-gray-600">{url}</span>,
+      title: "密钥",
+      dataIndex: "secret",
+      key: "secret",
+      render: (secret: string | null) => (
+        <span className="text-secondary">{secret ? "已设置" : "无"}</span>
+      ),
     },
     {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 100,
-      render: (status: string, record: Webhook) => (
+      title: "状态",
+      dataIndex: "isActive",
+      key: "isActive",
+      render: (isActive: boolean, record: Webhook) => (
         <Switch
-          checked={status === "active"}
-          onChange={() => handleStatusToggle(record)}
+          checked={isActive}
+          onChange={(checked) => handleStatusChange(record, checked)}
           size="small"
         />
       ),
     },
     {
-      title: "Actions",
+      title: "操作",
       key: "actions",
-      width: 150,
-      render: (_: any, record: Webhook) => (
+      render: (_: unknown, record: Webhook) => (
         <Space>
-          <Link to={`/webhooks/${record.id}`}>
-            <Button type="text" size="small" icon={<LinkOutlined />} />
-          </Link>
-          <Button
-            type="text"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-          <Popconfirm
-            title="Delete Webhook"
-            description="Are you sure to delete this webhook?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Yes"
-            cancelText="No"
-          >
-            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          <Tooltip title="详情">
+            <Link to={`/webhooks/${record.id}`}>
+              <Button type="text" size="small" icon={<LinkOutlined />} />
+            </Link>
+          </Tooltip>
+          <Tooltip title="复制 URL">
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() =>
+                copyToClipboard(`${window.location.origin}/hook/${record.path}`)
+              }
+            />
+          </Tooltip>
+          <Tooltip title="编辑">
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            />
+          </Tooltip>
+          <Tooltip title="删除">
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record.id)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Webhooks</h2>
+    <div className="space-y-6">
+      {/* 页面标题 */}
+      <div className="page-header flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-primary m-0">
+            Webhook 管理
+          </h1>
+          <p className="text-secondary m-0 mt-1">管理和监控您的 Webhook 端点</p>
+        </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          Create Webhook
+          创建 Webhook
         </Button>
       </div>
 
-      <Input
-        prefix={<SearchOutlined className="text-gray-400" />}
-        placeholder="Search by name or URL..."
-        className="max-w-md"
-        value={searchText}
-        onChange={(e) => setSearchText(e.target.value)}
-      />
+      {/* 搜索和表格 */}
+      <Card bordered={false}>
+        <div className="mb-4">
+          <Input
+            placeholder="搜索名称或路径..."
+            prefix={<SearchOutlined style={{ color: "var(--text-muted)" }} />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ maxWidth: 300 }}
+            allowClear
+          />
+        </div>
+        <Table
+          columns={columns}
+          dataSource={filteredWebhooks}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            pageSize: 10,
+            showTotal: (total) => `共 ${total} 条`,
+          }}
+        />
+      </Card>
 
-      <Table
-        columns={columns}
-        dataSource={filteredWebhooks}
-        rowKey="id"
-        loading={loading}
-        pagination={{ pageSize: 10 }}
-        scroll={{ x: 800 }}
-      />
-
+      {/* 创建/编辑模态框 */}
       <Modal
-        title={editingWebhook ? "Edit Webhook" : "Create New Webhook"}
+        title={editingWebhook ? "编辑 Webhook" : "创建 Webhook"}
         open={isModalOpen}
-        onOk={handleSubmit}
         onCancel={() => setIsModalOpen(false)}
-        confirmLoading={loading}
+        footer={null}
+        destroyOnClose
       >
-        <WebhookForm form={form} initialValues={editingWebhook} />
+        <WebhookForm
+          initialValues={
+            editingWebhook
+              ? {
+                  name: editingWebhook.name,
+                  path: editingWebhook.path,
+                  secret: editingWebhook.secret || undefined,
+                }
+              : undefined
+          }
+          onSubmit={handleSubmit}
+          onCancel={() => setIsModalOpen(false)}
+        />
       </Modal>
     </div>
   );

@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import axios from "axios";
 import type { User, LoginDto } from "../types/auth";
+
+interface LoginResponse {
+  access_token: string;
+  user: {
+    id: string;
+    username: string;
+  };
+}
 
 interface AuthState {
   user: User | null;
@@ -17,25 +26,17 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
       login: async (credentials: LoginDto) => {
-        // Mock login
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            const mockUser = {
-              id: "1",
-              username: credentials.username,
-              avatar:
-                "https://api.dicebear.com/7.x/avataaars/svg?seed=" +
-                credentials.username,
-            };
-            const mockToken = "mock-jwt-token-" + Date.now();
+        const response = await axios.post<LoginResponse>("/api/auth/login", credentials);
+        const { access_token, user } = response.data;
 
-            set({
-              user: mockUser,
-              token: mockToken,
-              isAuthenticated: true,
-            });
-            resolve();
-          }, 500);
+        set({
+          user: {
+            id: user.id,
+            username: user.username,
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`,
+          },
+          token: access_token,
+          isAuthenticated: true,
         });
       },
       logout: () => set({ user: null, token: null, isAuthenticated: false }),

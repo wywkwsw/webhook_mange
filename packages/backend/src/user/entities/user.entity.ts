@@ -19,7 +19,7 @@ export class User {
   @Column({ select: false })
   passwordHash: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "varchar", nullable: true })
   email: string | null;
 
   @CreateDateColumn()

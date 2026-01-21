@@ -19,7 +19,7 @@ export class Webhook {
   @Column({ unique: true })
   path: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "varchar", nullable: true })
   secret: string | null;
 
   @Column({ default: true })

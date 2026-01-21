@@ -13,13 +13,13 @@ export class WebhookLog {
   headers: Record<string, string>;
 
   @Column({ type: "jsonb", nullable: true })
-  payload: unknown | null;
+  payload: Record<string, unknown> | null;
 
   @Column()
   statusCode: number;
 
   @Column({ type: "jsonb", nullable: true })
-  response: unknown | null;
+  response: Record<string, unknown> | null;
 
   @ManyToOne(() => Webhook, { onDelete: "CASCADE" })
   webhook: Webhook;

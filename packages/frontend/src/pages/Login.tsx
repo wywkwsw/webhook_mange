@@ -1,85 +1,107 @@
-import { Button, Checkbox, Form, Input, Card, message } from "antd";
-import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { Form, Input, Button, message } from "antd";
+import { UserOutlined, LockOutlined, ApiOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { useState } from "react";
-import type { LoginDto } from "../types/auth";
+
+interface LoginFormData {
+  username: string;
+  password: string;
+}
 
 const Login = () => {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
-  const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm();
 
-  const onFinish = async (values: LoginDto) => {
-    setLoading(true);
+  const handleSubmit = async (values: LoginFormData) => {
     try {
-      await login(values);
-      message.success("Login successful");
+      await login({ username: values.username, password: values.password });
+      message.success("登录成功");
       navigate("/");
     } catch {
-      message.error("Login failed");
-    } finally {
-      setLoading(false);
+      message.error("用户名或密码错误");
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <Card className="w-full max-w-md shadow-lg" bordered={false}>
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: "#f8fafc" }}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl p-8"
+        style={{
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        {/* Logo 和标题 */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-800">Webhook Manager</h1>
-          <p className="text-gray-500 mt-2">Sign in to your account</p>
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: "#3b82f6" }}
+          >
+            <ApiOutlined className="text-3xl text-white" />
+          </div>
+          <h1
+            className="text-2xl font-semibold m-0"
+            style={{ color: "#1e293b" }}
+          >
+            Webhook 管理平台
+          </h1>
+          <p className="mt-2 m-0" style={{ color: "#64748b" }}>
+            请登录您的账户
+          </p>
         </div>
 
+        {/* 登录表单 */}
         <Form
-          name="login"
-          initialValues={{ remember: true }}
-          onFinish={onFinish}
+          form={form}
           layout="vertical"
+          onFinish={handleSubmit}
+          autoComplete="off"
           size="large"
         >
           <Form.Item
             name="username"
-            rules={[{ required: true, message: "Please input your Username!" }]}
+            label={<span style={{ color: "#1e293b" }}>用户名</span>}
+            rules={[{ required: true, message: "请输入用户名" }]}
           >
             <Input
-              prefix={<UserOutlined className="text-gray-400" />}
-              placeholder="Username"
+              prefix={<UserOutlined style={{ color: "#94a3b8" }} />}
+              placeholder="请输入用户名"
             />
           </Form.Item>
 
           <Form.Item
             name="password"
-            rules={[{ required: true, message: "Please input your Password!" }]}
+            label={<span style={{ color: "#1e293b" }}>密码</span>}
+            rules={[{ required: true, message: "请输入密码" }]}
           >
             <Input.Password
-              prefix={<LockOutlined className="text-gray-400" />}
-              placeholder="Password"
+              prefix={<LockOutlined style={{ color: "#94a3b8" }} />}
+              placeholder="请输入密码"
             />
           </Form.Item>
 
-          <Form.Item>
-            <Form.Item name="remember" valuePropName="checked" noStyle>
-              <Checkbox>Remember me</Checkbox>
-            </Form.Item>
-          </Form.Item>
-
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              className="w-full"
-              loading={loading}
-            >
-              Log in
+          <Form.Item className="mb-0 mt-6">
+            <Button type="primary" htmlType="submit" block size="large">
+              登录
             </Button>
           </Form.Item>
         </Form>
-      </Card>
 
-      <p className="mt-8 text-gray-500 text-sm">
-        Default Mock Login: Any username / any password
-      </p>
+        {/* 提示信息 */}
+        <div
+          className="mt-6 p-4 rounded-lg text-center"
+          style={{ background: "#f1f5f9" }}
+        >
+          <p className="text-sm m-0" style={{ color: "#64748b" }}>
+            演示账号：admin / admin123
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
