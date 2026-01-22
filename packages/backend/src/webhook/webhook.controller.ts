@@ -13,17 +13,21 @@ import {
 } from "@nestjs/common";
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 import { Request } from "express";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CreateWebhookDto } from "./dto/create-webhook.dto";
+import { ExportWebhookDto } from "./dto/export-webhook.dto";
+import { ImportMode, ImportWebhookDto, ImportWebhookQueryDto } from "./dto/import-webhook.dto";
 import { UpdateWebhookDto } from "./dto/update-webhook.dto";
 import { WebhookListQueryDto } from "./dto/webhook-list-query.dto";
 import { WebhookService } from "./webhook.service";
@@ -109,5 +113,68 @@ export class WebhookController {
   async remove(@Req() req: Request, @Param("id") id: string) {
     const userId = getUserId(req);
     return await this.webhookService.remove(userId, id);
+  }
+
+  @ApiOperation({ summary: "导出 webhook 配置" })
+  @ApiOkResponse({
+    description: "导出的 JSON 配置",
+    schema: {
+      example: {
+        version: "1.0",
+        exportedAt: "2026-01-22T10:00:00.000Z",
+        webhooks: [
+          {
+            name: "TradingView",
+            path: "tradingview",
+            secret: null,
+            isActive: true,
+            config: null,
+            forwardConfig: null,
+          },
+        ],
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: "缺少或无效的 JWT" })
+  @ApiBody({ type: ExportWebhookDto, required: false })
+  @Post("export")
+  async exportWebhooks(@Req() req: Request, @Body() body?: ExportWebhookDto) {
+    const userId = getUserId(req);
+    return await this.webhookService.exportWebhooks(userId, body?.ids);
+  }
+
+  @ApiOperation({ summary: "导入 webhook 配置" })
+  @ApiOkResponse({
+    description: "导入结果",
+    schema: {
+      example: {
+        total: 3,
+        imported: 2,
+        skipped: 1,
+        overwritten: 0,
+        renamed: 0,
+        errors: [],
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: "缺少或无效的 JWT" })
+  @ApiQuery({
+    name: "mode",
+    enum: ImportMode,
+    required: false,
+    description: "导入模式：skip-跳过冲突, overwrite-覆盖, rename-重命名",
+  })
+  @Post("import")
+  async importWebhooks(
+    @Req() req: Request,
+    @Body() body: ImportWebhookDto,
+    @Query() query: ImportWebhookQueryDto,
+  ) {
+    const userId = getUserId(req);
+    return await this.webhookService.importWebhooks(
+      userId,
+      body.webhooks,
+      query.mode ?? ImportMode.SKIP,
+    );
   }
 }

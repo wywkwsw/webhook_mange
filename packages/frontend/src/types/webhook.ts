@@ -57,3 +57,38 @@ export interface WebhookLog {
   response: Record<string, unknown> | null;
   receivedAt: string;
 }
+
+/**
+ * 导出数据格式
+ */
+export interface WebhookExportItem {
+  name: string;
+  path: string;
+  secret: string | null;
+  isActive: boolean;
+  config: Record<string, unknown> | null;
+  forwardConfig: ForwardConfig | null;
+}
+
+export interface WebhookExportData {
+  version: string;
+  exportedAt: string;
+  webhooks: WebhookExportItem[];
+}
+
+/**
+ * 导入模式
+ */
+export type ImportMode = "skip" | "overwrite" | "rename";
+
+/**
+ * 导入结果
+ */
+export interface ImportResult {
+  total: number;
+  imported: number;
+  skipped: number;
+  overwritten: number;
+  renamed: number;
+  errors: { path: string; error: string }[];
+}

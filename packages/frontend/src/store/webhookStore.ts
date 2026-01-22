@@ -5,6 +5,9 @@ import type {
   CreateWebhookDto,
   UpdateWebhookDto,
   WebhookLog,
+  WebhookExportData,
+  ImportMode,
+  ImportResult,
 } from "../types/webhook";
 
 interface WebhookState {
@@ -19,6 +22,8 @@ interface WebhookState {
   createWebhook: (data: CreateWebhookDto) => Promise<void>;
   updateWebhook: (id: string, data: UpdateWebhookDto) => Promise<void>;
   deleteWebhook: (id: string) => Promise<void>;
+  exportWebhooks: (ids?: string[]) => Promise<WebhookExportData>;
+  importWebhooks: (data: WebhookExportData, mode?: ImportMode) => Promise<ImportResult>;
 }
 
 export const useWebhookStore = create<WebhookState>((set, get) => ({
@@ -113,5 +118,15 @@ export const useWebhookStore = create<WebhookState>((set, get) => ({
       set({ error: message, loading: false });
       throw error;
     }
+  },
+
+  exportWebhooks: async (ids?: string[]) => {
+    const response = await client.post<WebhookExportData>("/webhooks/export", { ids });
+    return response.data;
+  },
+
+  importWebhooks: async (data: WebhookExportData, mode: ImportMode = "skip") => {
+    const response = await client.post<ImportResult>(`/webhooks/import?mode=${mode}`, data);
+    return response.data;
   },
 }));
