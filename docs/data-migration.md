@@ -409,6 +409,145 @@ docker exec -it webhook-postgres psql -U webhook webhook_manager
 
 ---
 
+---
+
+## 域名更换指南
+
+当域名到期或需要更换域名时，按以下步骤操作。
+
+### 步骤 1：配置新域名 DNS
+
+在新域名服务商处添加 DNS 解析：
+
+| 记录类型 | 主机记录 | 记录值 |
+|---------|---------|--------|
+| A | @ | your-server-ip |
+| A | www | your-server-ip |
+
+> DNS 解析生效可能需要几分钟到几小时。
+
+验证 DNS 解析：
+```bash
+dig new-domain.com +short
+dig www.new-domain.com +short
+# 应该返回你的服务器 IP
+```
+
+### 步骤 2：更新环境配置
+
+```bash
+cd /opt/webhook_mange
+
+# 编辑 .env 文件
+nano .env
+```
+
+修改以下配置项：
+
+```ini
+# 更新域名
+DOMAIN=new-domain.com
+FRONTEND_DOMAIN=www.new-domain.com
+
+# 更新 CORS（重要！）
+CORS_ORIGIN=https://www.new-domain.com
+
+# 更新 Let's Encrypt 邮箱（如果需要）
+ACME_EMAIL=admin@new-domain.com
+```
+
+### 步骤 3：删除旧 SSL 证书
+
+旧证书与旧域名绑定，需要删除让 Traefik 重新申请：
+
+```bash
+# 停止 Traefik
+docker compose -f docker-compose.full.yml stop traefik
+
+# 删除旧证书
+docker volume rm webhook_mange_letsencrypt_data 2>/dev/null || true
+
+# 或者进入容器删除
+docker exec webhook-traefik rm /letsencrypt/acme.json 2>/dev/null || true
+```
+
+### 步骤 4：重新部署
+
+```bash
+# 重新启动所有服务
+docker compose -f docker-compose.full.yml down
+docker compose -f docker-compose.full.yml up -d
+
+# 查看 Traefik 日志，确认证书申请成功
+docker logs webhook-traefik 2>&1 | grep -i "certificate\|acme"
+```
+
+### 步骤 5：验证新域名
+
+```bash
+# 测试 HTTPS 访问
+curl -I https://www.new-domain.com
+
+# 检查 SSL 证书
+curl -vI https://www.new-domain.com 2>&1 | grep -i "subject\|issuer"
+```
+
+### 步骤 6：更新 Webhook URL（重要！）
+
+如果你在第三方服务（如 TradingView）配置了 Webhook URL，需要更新：
+
+**旧地址**：`https://old-domain.com/hook/your-path`
+
+**新地址**：`https://www.new-domain.com/hook/your-path`
+
+### 域名更换检查清单
+
+- [ ] 新域名 DNS 已解析到服务器 IP
+- [ ] `.env` 中 `DOMAIN` 已更新
+- [ ] `.env` 中 `FRONTEND_DOMAIN` 已更新
+- [ ] `.env` 中 `CORS_ORIGIN` 已更新
+- [ ] 旧 SSL 证书已删除
+- [ ] 服务已重新部署
+- [ ] 新域名可通过 HTTPS 正常访问
+- [ ] SSL 证书已正确颁发给新域名
+- [ ] 第三方服务的 Webhook URL 已更新
+
+### 常见问题
+
+#### Q1：新域名无法访问
+
+**检查 DNS**：
+```bash
+dig www.new-domain.com +short
+```
+如果返回空，说明 DNS 还未生效，等待几分钟再试。
+
+#### Q2：SSL 证书申请失败
+
+**检查原因**：
+```bash
+docker logs webhook-traefik 2>&1 | grep -i "error\|acme"
+```
+
+常见原因：
+- DNS 未生效
+- 80 端口被占用
+- Let's Encrypt 速率限制（同一域名短时间内申请次数过多）
+
+#### Q3：CORS 错误
+
+确保 `.env` 中的 `CORS_ORIGIN` 与新域名一致：
+```ini
+CORS_ORIGIN=https://www.new-domain.com
+```
+
+重启后端服务：
+```bash
+docker compose -f docker-compose.full.yml restart backend
+```
+
+---
+
 ## 迁移检查清单
 
 - [ ] 源服务器数据库备份完成

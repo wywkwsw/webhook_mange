@@ -11,7 +11,7 @@
 | 文档 | 说明 |
 |------|------|
 | [deployment.md](./deployment.md) | **主部署文档** - Docker 部署完整指南，包含快速部署、HTTPS 配置、分离部署等 |
-| [data-migration.md](./data-migration.md) | 数据备份与迁移指南 |
+| [data-migration.md](./data-migration.md) | 数据备份、迁移、域名更换指南 |
 
 ### 开发文档
 
@@ -146,11 +146,27 @@ cat backup.sql | docker exec -i webhook-postgres psql -U webhook webhook_manager
 
 ---
 
+---
+
+## 域名更换
+
+如果域名到期或需要更换域名，请参考 [域名更换指南](./data-migration.md#域名更换指南)。
+
+简要步骤：
+1. 配置新域名 DNS 解析
+2. 更新 `.env` 中的 `DOMAIN`、`FRONTEND_DOMAIN`、`CORS_ORIGIN`
+3. 删除旧 SSL 证书
+4. 重新部署服务
+5. 更新第三方服务中的 Webhook URL
+
+---
+
 ## 获取帮助
 
 如遇到问题，请参考：
 
 1. 部署问题 → [deployment.md](./deployment.md#问题排查)
 2. 数据迁移 → [data-migration.md](./data-migration.md#常见问题)
-3. 后端开发 → [backend-manual.md](./backend-manual.md#常见问题)
-4. 前端开发 → [frontend-manual.md](./frontend-manual.md#常见问题)
+3. 域名更换 → [data-migration.md](./data-migration.md#域名更换指南)
+4. 后端开发 → [backend-manual.md](./backend-manual.md#常见问题)
+5. 前端开发 → [frontend-manual.md](./frontend-manual.md#常见问题)
