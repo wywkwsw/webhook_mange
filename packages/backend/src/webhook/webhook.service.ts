@@ -42,6 +42,7 @@ export class WebhookService {
       secret: dto.secret ?? null,
       isActive: dto.isActive ?? true,
       config: dto.config ?? null,
+      forwardConfig: dto.forwardConfig ?? null,
       user: { id: userId } as unknown as User,
     });
     return await this.webhookRepository.save(webhook);
@@ -115,6 +116,7 @@ export class WebhookService {
       secret: dto.secret === undefined ? webhook.secret : dto.secret,
       isActive: dto.isActive ?? webhook.isActive,
       config: dto.config === undefined ? webhook.config : dto.config,
+      forwardConfig: dto.forwardConfig === undefined ? webhook.forwardConfig : dto.forwardConfig,
     });
 
     return await this.webhookRepository.save(webhook);

@@ -10,17 +10,57 @@ import {
   Collapse,
   Alert,
   Divider,
+  Tooltip,
 } from "antd";
 import {
   SendOutlined,
   SettingOutlined,
   QuestionCircleOutlined,
 } from "@ant-design/icons";
+import Editor from "@monaco-editor/react";
 import type { ForwardConfig } from "../../types/webhook";
 
 const { Text } = Typography;
 const { TextArea } = Input;
 const { Panel } = Collapse;
+
+/**
+ * JSON Template Editor component compatible with Ant Design Form
+ */
+interface JsonTemplateEditorProps {
+  value?: string;
+  onChange?: (value: string) => void;
+}
+
+const JsonTemplateEditor = ({ value, onChange }: JsonTemplateEditorProps) => {
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
+      <Editor
+        height="200px"
+        language="json"
+        theme="vs-dark"
+        value={value || ""}
+        onChange={(val) => onChange?.(val || "")}
+        options={{
+          minimap: { enabled: false },
+          fontSize: 13,
+          lineNumbers: "on",
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          tabSize: 2,
+          wordWrap: "on",
+          formatOnPaste: true,
+          formatOnType: true,
+          scrollbar: {
+            verticalScrollbarSize: 8,
+            horizontalScrollbarSize: 8,
+          },
+          padding: { top: 8, bottom: 8 },
+        }}
+      />
+    </div>
+  );
+};
 
 interface WebhookFormValues {
   name: string;
@@ -224,10 +264,19 @@ const WebhookForm = ({ initialValues, onSubmit, onCancel }: WebhookFormProps) =>
                   label={
                     <Space>
                       <span className="text-primary font-medium">消息模板</span>
-                      <QuestionCircleOutlined
-                        className="text-gray-400 cursor-help"
-                        title={TEMPLATE_HELP}
-                      />
+                      <Tooltip
+                        title={
+                          <div className="whitespace-pre-line text-sm">
+                            {TEMPLATE_HELP}
+                            {"\n\n"}
+                            <strong>提示：</strong>留空则直接转发原始请求体
+                          </div>
+                        }
+                        placement="right"
+                        overlayStyle={{ maxWidth: 400 }}
+                      >
+                        <QuestionCircleOutlined className="text-blue-400 cursor-help" />
+                      </Tooltip>
                     </Space>
                   }
                   extra={
@@ -261,11 +310,7 @@ const WebhookForm = ({ initialValues, onSubmit, onCancel }: WebhookFormProps) =>
                     </div>
                   }
                 >
-                  <TextArea
-                    rows={8}
-                    placeholder={`留空则直接转发原始请求体。\n\n支持变量：\n${TEMPLATE_HELP}`}
-                    className="font-mono text-sm"
-                  />
+                  <JsonTemplateEditor />
                 </Form.Item>
 
                 <Collapse ghost size="small">
