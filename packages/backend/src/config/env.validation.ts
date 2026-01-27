@@ -103,8 +103,14 @@ export function validateEnv(env: RawEnv): RawEnv {
       errors.push("JWT_SECRET must not be the default value (dev_secret) in production");
     }
 
-    if (asNonEmptyString(env.DB_SYNCHRONIZE) === "true") {
-      errors.push("DB_SYNCHRONIZE must be false in production");
+    // Allow DB_SYNCHRONIZE=true only if DB_SYNC_FORCE=true (for initial deployment)
+    if (
+      asNonEmptyString(env.DB_SYNCHRONIZE) === "true" &&
+      asNonEmptyString(env.DB_SYNC_FORCE) !== "true"
+    ) {
+      errors.push(
+        "DB_SYNCHRONIZE must be false in production. Set DB_SYNC_FORCE=true to override (for initial deployment only)",
+      );
     }
 
     if (dbType === "postgres") {

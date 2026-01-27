@@ -166,11 +166,13 @@ JWT_EXPIRES_IN=7d
 BCRYPT_SALT_ROUNDS=10
 
 # ----------------------------------------
-# Database Auto Sync (重要！)
+# Database Auto Sync (重要！首次部署必须设置)
 # ----------------------------------------
 # 首次部署必须设为 true，让 TypeORM 自动创建表
-# 表创建完成后可改为 false
+# 表创建完成后建议改为 false
 DB_SYNCHRONIZE=true
+# 生产环境强制覆盖，允许自动同步
+DB_SYNC_FORCE=true
 
 # ----------------------------------------
 # CORS Configuration
