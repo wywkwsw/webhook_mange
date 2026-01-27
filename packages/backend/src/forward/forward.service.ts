@@ -130,6 +130,33 @@ export class ForwardService {
     // 替换 payload 的属性（支持 {{payload.xxx}} 格式）
     const payloadObj = data.payload as Record<string, unknown> | null;
     if (payloadObj && typeof payloadObj === "object") {
+      // 先处理带格式化的时间变量 {{payload.xxx|time_cn}}
+      body = body.replace(/\{\{payload\.([^}|]+)\|time_cn\}\}/g, (_, key: string) => {
+        const value = this.getNestedValue(payloadObj, key);
+        if (value === undefined || value === null || value === "") return "";
+        try {
+          const date = new Date(value as string | number);
+          if (isNaN(date.getTime())) return String(value);
+          return date.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
+        } catch {
+          return String(value);
+        }
+      });
+
+      // 处理带 ISO 格式化的时间变量 {{payload.xxx|time}}
+      body = body.replace(/\{\{payload\.([^}|]+)\|time\}\}/g, (_, key: string) => {
+        const value = this.getNestedValue(payloadObj, key);
+        if (value === undefined || value === null || value === "") return "";
+        try {
+          const date = new Date(value as string | number);
+          if (isNaN(date.getTime())) return String(value);
+          return date.toISOString();
+        } catch {
+          return String(value);
+        }
+      });
+
+      // 处理普通的 payload 属性
       body = body.replace(/\{\{payload\.([^}]+)\}\}/g, (_, key: string) => {
         const value = this.getNestedValue(payloadObj, key);
         if (value === undefined) return "";

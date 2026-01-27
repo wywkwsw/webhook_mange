@@ -26,7 +26,7 @@ const { Panel } = Collapse;
 
 /**
  * JSON Template Editor component compatible with Ant Design Form
- * 
+ *
  * This editor handles JSON strings with newlines properly:
  * - Displays: actual newlines for readability
  * - Stores: escaped \n sequences for valid JSON
@@ -67,32 +67,32 @@ const toStorageFormat = (display: string): string => {
     let result = "";
     let inString = false;
     let escapeNext = false;
-    
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+
       for (let j = 0; j < line.length; j++) {
         const char = line[j];
-        
+
         if (escapeNext) {
           escapeNext = false;
           result += char;
           continue;
         }
-        
+
         if (char === "\\") {
           escapeNext = true;
           result += char;
           continue;
         }
-        
+
         if (char === '"') {
           inString = !inString;
         }
-        
+
         result += char;
       }
-      
+
       // Add newline between lines, but escape it if we're inside a string
       if (i < lines.length - 1) {
         if (inString) {
@@ -102,7 +102,7 @@ const toStorageFormat = (display: string): string => {
         }
       }
     }
-    
+
     // Validate the result is valid JSON
     JSON.parse(result);
     return result;
@@ -115,7 +115,7 @@ const toStorageFormat = (display: string): string => {
 const JsonTemplateEditor = ({ value, onChange }: JsonTemplateEditorProps) => {
   // Convert stored value to display format
   const displayValue = toDisplayFormat(value || "");
-  
+
   const handleChange = (val: string | undefined) => {
     if (!val) {
       onChange?.("");
@@ -125,7 +125,7 @@ const JsonTemplateEditor = ({ value, onChange }: JsonTemplateEditorProps) => {
     const storageValue = toStorageFormat(val);
     onChange?.(storageValue);
   };
-  
+
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
       <Editor
@@ -172,6 +172,8 @@ interface WebhookFormProps {
 const TEMPLATE_HELP = `支持以下变量：
 • {{payload}} - 完整的原始请求体 (JSON)
 • {{payload.xxx}} - 请求体中的特定字段
+• {{payload.xxx|time_cn}} - 将字段格式化为中国时区时间
+• {{payload.xxx|time}} - 将字段格式化为 ISO 时间
 • {{method}} - 请求方法 (GET/POST 等)
 • {{webhookName}} - Webhook 名称
 • {{webhookPath}} - Webhook 路径
@@ -180,28 +182,55 @@ const TEMPLATE_HELP = `支持以下变量：
 
 // Templates are stored as valid JSON strings (with escaped \n)
 // The editor will display them with actual newlines for readability
-const TELEGRAM_TEMPLATE = JSON.stringify({
-  chat_id: "YOUR_CHAT_ID",
-  text: "**{{webhookName}}**\n\n收到 {{method}} 请求\n时间: {{time_cn}}\n\n消息: {{payload.message}}",
-  parse_mode: "Markdown"
-}, null, 2);
+const TELEGRAM_TEMPLATE = JSON.stringify(
+  {
+    chat_id: "YOUR_CHAT_ID",
+    text: "**{{webhookName}}**\n\n收到 {{method}} 请求\n时间: {{time_cn}}\n\n消息: {{payload.message}}",
+    parse_mode: "Markdown",
+  },
+  null,
+  2
+);
 
-const DINGTALK_TEMPLATE = JSON.stringify({
-  msgtype: "markdown",
-  markdown: {
-    title: "{{webhookName}}",
-    text: "### {{webhookName}}\n\n> 时间: {{time_cn}}\n\n{{payload.message}}"
-  }
-}, null, 2);
+const TRADINGVIEW_TEMPLATE = JSON.stringify(
+  {
+    chat_id: "YOUR_CHAT_ID",
+    text: "**当前警报名称: {{payload.alert_name}}**\n\n交易对: {{payload.symbol}}\n当前价格: {{payload.price}}\n时间: {{payload.time|time_cn}}\n\nMessage: {{payload.message}}",
+    parse_mode: "Markdown",
+  },
+  null,
+  2
+);
 
-const WECHAT_TEMPLATE = JSON.stringify({
-  msgtype: "markdown",
-  markdown: {
-    content: "### {{webhookName}}\n> 时间: <font color=\"comment\">{{time_cn}}</font>\n\n{{payload.message}}"
-  }
-}, null, 2);
+const DINGTALK_TEMPLATE = JSON.stringify(
+  {
+    msgtype: "markdown",
+    markdown: {
+      title: "{{webhookName}}",
+      text: "### {{webhookName}}\n\n> 时间: {{time_cn}}\n\n{{payload.message}}",
+    },
+  },
+  null,
+  2
+);
 
-const WebhookForm = ({ initialValues, onSubmit, onCancel }: WebhookFormProps) => {
+const WECHAT_TEMPLATE = JSON.stringify(
+  {
+    msgtype: "markdown",
+    markdown: {
+      content:
+        '### {{webhookName}}\n> 时间: <font color="comment">{{time_cn}}</font>\n\n{{payload.message}}',
+    },
+  },
+  null,
+  2
+);
+
+const WebhookForm = ({
+  initialValues,
+  onSubmit,
+  onCancel,
+}: WebhookFormProps) => {
   const [form] = Form.useForm();
   const isEditing = !!initialValues;
 
@@ -275,7 +304,8 @@ const WebhookForm = ({ initialValues, onSubmit, onCancel }: WebhookFormProps) =>
           rules={[{ max: 200, message: "密钥长度不能超过 200 个字符" }]}
           extra={
             <Text type="secondary" className="text-xs">
-              设置后，请求需在 x-webhook-secret 请求头或 ?secret= 查询参数中携带此密钥
+              设置后，请求需在 x-webhook-secret 请求头或 ?secret=
+              查询参数中携带此密钥
             </Text>
           }
         >
@@ -296,7 +326,9 @@ const WebhookForm = ({ initialValues, onSubmit, onCancel }: WebhookFormProps) =>
       {/* 转发配置 */}
       <Collapse
         ghost
-        defaultActiveKey={initialValues?.forwardConfig?.enabled ? ["forward"] : []}
+        defaultActiveKey={
+          initialValues?.forwardConfig?.enabled ? ["forward"] : []
+        }
       >
         <Panel
           header={
@@ -328,14 +360,17 @@ const WebhookForm = ({ initialValues, onSubmit, onCancel }: WebhookFormProps) =>
 
                 <Form.Item
                   name={["forwardConfig", "targetUrl"]}
-                  label={<span className="text-primary font-medium">目标 URL</span>}
+                  label={
+                    <span className="text-primary font-medium">目标 URL</span>
+                  }
                   rules={[
                     { required: forwardEnabled, message: "请输入目标 URL" },
                     { type: "url", message: "请输入有效的 URL" },
                   ]}
                   extra={
                     <Text type="secondary" className="text-xs">
-                      例如: https://api.telegram.org/bot&lt;TOKEN&gt;/sendMessage
+                      例如:
+                      https://api.telegram.org/bot&lt;TOKEN&gt;/sendMessage
                     </Text>
                   }
                 >
@@ -344,7 +379,9 @@ const WebhookForm = ({ initialValues, onSubmit, onCancel }: WebhookFormProps) =>
 
                 <Form.Item
                   name={["forwardConfig", "method"]}
-                  label={<span className="text-primary font-medium">HTTP 方法</span>}
+                  label={
+                    <span className="text-primary font-medium">HTTP 方法</span>
+                  }
                 >
                   <Select>
                     <Select.Option value="GET">GET</Select.Option>
@@ -386,6 +423,13 @@ const WebhookForm = ({ initialValues, onSubmit, onCancel }: WebhookFormProps) =>
                           onClick={() => applyTemplate(TELEGRAM_TEMPLATE)}
                         >
                           Telegram
+                        </Button>
+                        <Button
+                          size="small"
+                          type="dashed"
+                          onClick={() => applyTemplate(TRADINGVIEW_TEMPLATE)}
+                        >
+                          TradingView
                         </Button>
                         <Button
                           size="small"
