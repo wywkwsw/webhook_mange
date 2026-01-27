@@ -238,6 +238,56 @@ server {
 }
 ```
 
+---
+
+## 全栈部署（推荐）
+
+前后端同一服务器部署，使用 `docker-compose.full.yml`。
+
+### 配置示例
+
+```bash
+# .env 配置
+# 域名配置
+DOMAIN=example.com
+FRONTEND_DOMAIN=www.example.com
+ACME_EMAIL=admin@example.com
+
+# 数据库配置
+DB_PASSWORD=your-secure-password
+DB_SYNCHRONIZE=true
+DB_SYNC_FORCE=true
+
+# JWT 配置
+JWT_SECRET=your-random-secret-key-at-least-32-chars
+
+# CORS 配置
+CORS_ORIGIN=https://www.example.com
+```
+
+### 启动服务
+
+```bash
+# 启动全栈服务
+docker compose -f docker-compose.full.yml up -d --build
+
+# 查看日志
+docker compose -f docker-compose.full.yml logs -f
+
+# 停止服务
+docker compose -f docker-compose.full.yml down
+```
+
+### 访问地址
+
+- **前端**: https://www.example.com
+- **后端 API**: https://www.example.com/api
+- **Webhook 端点**: https://www.example.com/hook/{path}
+
+> **注意**：首次部署后，建议将 `DB_SYNCHRONIZE` 和 `DB_SYNC_FORCE` 改为 `false` 以防止意外的数据库表修改。
+
+---
+
 ### 分离部署架构图
 
 ```
@@ -310,6 +360,11 @@ docker compose -f docker-compose.frontend.yml up -d --build
 | `CORS_ORIGIN`         | \*              | 允许的跨域来源                       |
 | `FRONTEND_PORT`       | 80              | 前端访问端口                         |
 | `BACKEND_PORT_EXPOSE` | 3000            | 后端 API 暴露端口                    |
+| `DB_SYNCHRONIZE`      | true            | 数据库自动同步（首次部署必须为 true）|
+| `DB_SYNC_FORCE`       | true            | 生产环境强制同步覆盖（首次部署必须为 true）|
+| `DOMAIN`              | -               | 后端域名（HTTPS 部署必需）            |
+| `FRONTEND_DOMAIN`     | -               | 前端域名（全栈部署必需）              |
+| `ACME_EMAIL`          | -               | Let's Encrypt 邮箱（HTTPS 部署必需） |
 
 ### 服务架构
 
@@ -360,14 +415,41 @@ docker compose logs -f backend
 ### 更新部署
 
 ```bash
-# 拉取最新代码
+# 1. 备份数据库（重要！更新前务必备份）
+docker exec webhook-postgres pg_dump -U webhook webhook_manager > backup_$(date +%Y%m%d).sql
+
+# 2. 拉取最新代码
 git pull
 
-# 重新构建并启动
-docker compose up -d --build
+# 3. 重新构建并启动（选择对应的 compose 文件）
+# HTTP 模式
+docker compose down && docker compose up -d --build
 
-# 仅重建某个服务
+# HTTPS 模式（分离部署）
+docker compose -f docker-compose.backend.yml down
+docker compose -f docker-compose.backend.yml up -d --build
+
+# 全栈部署
+docker compose -f docker-compose.full.yml down
+docker compose -f docker-compose.full.yml up -d --build
+
+# 4. 仅重建某个服务
 docker compose up -d --build backend
+docker compose up -d --build frontend
+
+# 5. 查看日志确认启动成功
+docker compose logs -f
+
+# 6. 清理旧镜像（可选，释放磁盘空间）
+docker image prune -f
+```
+
+### 零停机更新（推荐）
+
+```bash
+# 仅重建并重启需要更新的服务，不影响其他服务
+docker compose -f docker-compose.full.yml up -d --build --no-deps backend
+docker compose -f docker-compose.full.yml up -d --build --no-deps frontend
 ```
 
 ### 数据库管理

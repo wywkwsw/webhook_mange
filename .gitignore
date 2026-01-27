@@ -12,4 +12,13 @@ ssl/*.pem
 ssl/*.key
 ssl/*.crt
 !ssl/README.md
+
+# Backup files
+backups/
+*.sql
+*.sql.gz
+
+# IDE
 .ace-tool/
+.idea/
+*.swp

@@ -366,6 +366,27 @@ docker logs webhook-postgres --tail 50
 
 ## 快速命令参考
 
+### 更新部署（带备份）
+
+```bash
+# 一键更新脚本
+cd /opt/webhook_mange
+
+# 1. 备份
+docker exec webhook-postgres pg_dump -U webhook webhook_manager > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# 2. 更新代码
+git pull
+
+# 3. 重新部署
+docker compose -f docker-compose.full.yml up -d --build
+
+# 4. 查看日志
+docker compose -f docker-compose.full.yml logs -f --tail=50
+```
+
+### 基础操作
+
 ```bash
 # 备份数据库
 docker exec webhook-postgres pg_dump -U webhook webhook_manager > backup.sql
