@@ -11,7 +11,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+# Note: Using npm install because this is a monorepo without individual package-lock.json
+RUN npm install
 
 # Copy source code
 COPY . .
