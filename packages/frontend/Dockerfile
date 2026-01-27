@@ -39,9 +39,12 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
 # Expose port
 EXPOSE 80
 
+# Install curl for health check
+RUN apk add --no-cache curl
+
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:80/ || exit 1
 
 # Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
