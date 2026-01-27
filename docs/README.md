@@ -8,17 +8,17 @@
 
 ### 部署指南
 
-| 文档 | 说明 |
-|------|------|
-| [deployment.md](./deployment.md) | **主部署文档** - Docker 部署完整指南，包含快速部署、HTTPS 配置、分离部署等 |
-| [data-migration.md](./data-migration.md) | 数据备份、迁移、域名更换指南 |
+| 文档                                     | 说明                                                                       |
+| ---------------------------------------- | -------------------------------------------------------------------------- |
+| [deployment.md](./deployment.md)         | **主部署文档** - Docker 部署完整指南，包含快速部署、HTTPS 配置、分离部署等 |
+| [data-migration.md](./data-migration.md) | 数据备份、迁移、域名更换指南                                               |
 
 ### 开发文档
 
-| 文档 | 说明 |
-|------|------|
-| [backend-manual.md](./backend-manual.md) | 后端开发手册 - NestJS API 文档、数据库操作等 |
-| [frontend-manual.md](./frontend-manual.md) | 前端开发手册 - React 组件、页面操作指南等 |
+| 文档                                       | 说明                                         |
+| ------------------------------------------ | -------------------------------------------- |
+| [backend-manual.md](./backend-manual.md)   | 后端开发手册 - NestJS API 文档、数据库操作等 |
+| [frontend-manual.md](./frontend-manual.md) | 前端开发手册 - React 组件、页面操作指南等    |
 
 ---
 
@@ -64,12 +64,12 @@ docker compose -f docker-compose.full.yml up -d --build
 
 ## 技术栈
 
-| 组件 | 技术 |
-|------|------|
-| 后端 | NestJS + TypeORM + PostgreSQL + JWT |
+| 组件 | 技术                                     |
+| ---- | ---------------------------------------- |
+| 后端 | NestJS + TypeORM + PostgreSQL + JWT      |
 | 前端 | React + Vite + Ant Design + Tailwind CSS |
-| 部署 | Docker + Docker Compose + Traefik |
-| SSL | Let's Encrypt 自动证书 |
+| 部署 | Docker + Docker Compose + Traefik        |
+| SSL  | Let's Encrypt 自动证书                   |
 
 ---
 
@@ -153,6 +153,7 @@ cat backup.sql | docker exec -i webhook-postgres psql -U webhook webhook_manager
 如果域名到期或需要更换域名，请参考 [域名更换指南](./data-migration.md#域名更换指南)。
 
 简要步骤：
+
 1. 配置新域名 DNS 解析
 2. 更新 `.env` 中的 `DOMAIN`、`FRONTEND_DOMAIN`、`CORS_ORIGIN`
 3. 删除旧 SSL 证书

@@ -348,23 +348,23 @@ docker compose -f docker-compose.frontend.yml up -d --build
 
 ### 环境变量
 
-| 变量名                | 默认值          | 说明                                 |
-| --------------------- | --------------- | ------------------------------------ |
-| `DB_USERNAME`         | webhook         | 数据库用户名                         |
-| `DB_PASSWORD`         | webhook123      | 数据库密码 ⚠️ **生产环境必须修改**   |
-| `DB_DATABASE`         | webhook_manager | 数据库名称                           |
-| `DB_PORT_EXPOSE`      | 5432            | 数据库对外暴露端口                   |
-| `JWT_SECRET`          | -               | JWT 签名密钥 ⚠️ **生产环境必须修改** |
-| `JWT_EXPIRES_IN`      | 7d              | JWT 过期时间                         |
-| `BCRYPT_SALT_ROUNDS`  | 10              | bcrypt 加密轮数                      |
-| `CORS_ORIGIN`         | \*              | 允许的跨域来源                       |
-| `FRONTEND_PORT`       | 80              | 前端访问端口                         |
-| `BACKEND_PORT_EXPOSE` | 3000            | 后端 API 暴露端口                    |
-| `DB_SYNCHRONIZE`      | true            | 数据库自动同步（首次部署必须为 true）|
-| `DB_SYNC_FORCE`       | true            | 生产环境强制同步覆盖（首次部署必须为 true）|
-| `DOMAIN`              | -               | 后端域名（HTTPS 部署必需）            |
-| `FRONTEND_DOMAIN`     | -               | 前端域名（全栈部署必需）              |
-| `ACME_EMAIL`          | -               | Let's Encrypt 邮箱（HTTPS 部署必需） |
+| 变量名                | 默认值          | 说明                                        |
+| --------------------- | --------------- | ------------------------------------------- |
+| `DB_USERNAME`         | webhook         | 数据库用户名                                |
+| `DB_PASSWORD`         | webhook123      | 数据库密码 ⚠️ **生产环境必须修改**          |
+| `DB_DATABASE`         | webhook_manager | 数据库名称                                  |
+| `DB_PORT_EXPOSE`      | 5432            | 数据库对外暴露端口                          |
+| `JWT_SECRET`          | -               | JWT 签名密钥 ⚠️ **生产环境必须修改**        |
+| `JWT_EXPIRES_IN`      | 7d              | JWT 过期时间                                |
+| `BCRYPT_SALT_ROUNDS`  | 10              | bcrypt 加密轮数                             |
+| `CORS_ORIGIN`         | \*              | 允许的跨域来源                              |
+| `FRONTEND_PORT`       | 80              | 前端访问端口                                |
+| `BACKEND_PORT_EXPOSE` | 3000            | 后端 API 暴露端口                           |
+| `DB_SYNCHRONIZE`      | true            | 数据库自动同步（首次部署必须为 true）       |
+| `DB_SYNC_FORCE`       | true            | 生产环境强制同步覆盖（首次部署必须为 true） |
+| `DOMAIN`              | -               | 后端域名（HTTPS 部署必需）                  |
+| `FRONTEND_DOMAIN`     | -               | 前端域名（全栈部署必需）                    |
+| `ACME_EMAIL`          | -               | Let's Encrypt 邮箱（HTTPS 部署必需）        |
 
 ### 服务架构
 
