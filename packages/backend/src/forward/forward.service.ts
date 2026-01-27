@@ -114,61 +114,132 @@ export class ForwardService {
     // 使用模板替换变量
     let body = config.bodyTemplate;
 
-    // 替换简单变量
-    body = body.replace(/\{\{method\}\}/g, data.method);
-    body = body.replace(/\{\{webhookName\}\}/g, data.webhookName);
-    body = body.replace(/\{\{webhookPath\}\}/g, data.webhookPath);
-    body = body.replace(/\{\{time\}\}/g, new Date().toISOString());
-    body = body.replace(
-      /\{\{time_cn\}\}/g,
+    // 检测变量是否在 JSON 字符串值内（被双引号包围）
+    const isInsideJsonString = (template: string, matchIndex: number): boolean => {
+      // 从匹配位置向前查找，统计未转义的双引号数量
+      let quoteCount = 0;
+      for (let i = matchIndex - 1; i >= 0; i--) {
+        if (template[i] === '"' && (i === 0 || template[i - 1] !== "\\")) {
+          quoteCount++;
+        }
+      }
+      // 奇数个双引号表示在字符串内
+      return quoteCount % 2 === 1;
+    };
+
+    // 转义字符串以便安全嵌入 JSON 字符串值中
+    const escapeForJsonString = (str: string): string => {
+      return str
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r")
+        .replace(/\t/g, "\\t");
+    };
+
+    // 替换简单变量（需要根据上下文决定是否转义）
+    const replaceSimpleVar = (
+      template: string,
+      pattern: RegExp,
+      getValue: () => string,
+    ): string => {
+      return template.replace(pattern, (match, ...args) => {
+        const value = getValue();
+        // args 的倒数第二个是 offset
+        const offset = args[args.length - 2] as number;
+        if (isInsideJsonString(template, offset)) {
+          return escapeForJsonString(value);
+        }
+        return value;
+      });
+    };
+
+    body = replaceSimpleVar(body, /\{\{method\}\}/g, () => data.method);
+    body = replaceSimpleVar(body, /\{\{webhookName\}\}/g, () => data.webhookName);
+    body = replaceSimpleVar(body, /\{\{webhookPath\}\}/g, () => data.webhookPath);
+    body = replaceSimpleVar(body, /\{\{time\}\}/g, () => new Date().toISOString());
+    body = replaceSimpleVar(body, /\{\{time_cn\}\}/g, () =>
       new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }),
     );
 
-    // 替换整个 payload（JSON 格式）
-    body = body.replace(/\{\{payload\}\}/g, JSON.stringify(data.payload));
+    // 替换整个 payload
+    // 特殊处理：如果 {{payload}} 在字符串内，需要转义 JSON；如果不在，直接替换为 JSON 对象
+    body = body.replace(/\{\{payload\}\}/g, (match, offset: number) => {
+      const payloadJson = JSON.stringify(data.payload);
+      if (isInsideJsonString(body, offset)) {
+        // 在字符串内：需要转义整个 JSON 字符串
+        return escapeForJsonString(payloadJson);
+      }
+      // 不在字符串内：直接返回 JSON（会成为对象/数组）
+      return payloadJson;
+    });
 
     // 替换 payload 的属性（支持 {{payload.xxx}} 格式）
     const payloadObj = data.payload as Record<string, unknown> | null;
     if (payloadObj && typeof payloadObj === "object") {
       // 先处理带格式化的时间变量 {{payload.xxx|time_cn}}
-      body = body.replace(/\{\{payload\.([^}|]+)\|time_cn\}\}/g, (_, key: string) => {
-        const value = this.getNestedValue(payloadObj, key);
-        if (value === undefined || value === null || value === "") return "";
-        try {
-          const date = new Date(value as string | number);
-          if (isNaN(date.getTime())) return String(value);
-          return date.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
-        } catch {
-          return String(value);
-        }
-      });
+      body = body.replace(
+        /\{\{payload\.([^}|]+)\|time_cn\}\}/g,
+        (match, key: string, offset: number) => {
+          const value = this.getNestedValue(payloadObj, key);
+          if (value === undefined || value === null || value === "") return "";
+          try {
+            const date = new Date(value as string | number);
+            if (isNaN(date.getTime())) {
+              const strValue = String(value);
+              return isInsideJsonString(body, offset) ? escapeForJsonString(strValue) : strValue;
+            }
+            const formatted = date.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
+            return isInsideJsonString(body, offset) ? escapeForJsonString(formatted) : formatted;
+          } catch {
+            const strValue = String(value);
+            return isInsideJsonString(body, offset) ? escapeForJsonString(strValue) : strValue;
+          }
+        },
+      );
 
       // 处理带 ISO 格式化的时间变量 {{payload.xxx|time}}
-      body = body.replace(/\{\{payload\.([^}|]+)\|time\}\}/g, (_, key: string) => {
-        const value = this.getNestedValue(payloadObj, key);
-        if (value === undefined || value === null || value === "") return "";
-        try {
-          const date = new Date(value as string | number);
-          if (isNaN(date.getTime())) return String(value);
-          return date.toISOString();
-        } catch {
-          return String(value);
-        }
-      });
+      body = body.replace(
+        /\{\{payload\.([^}|]+)\|time\}\}/g,
+        (match, key: string, offset: number) => {
+          const value = this.getNestedValue(payloadObj, key);
+          if (value === undefined || value === null || value === "") return "";
+          try {
+            const date = new Date(value as string | number);
+            if (isNaN(date.getTime())) {
+              const strValue = String(value);
+              return isInsideJsonString(body, offset) ? escapeForJsonString(strValue) : strValue;
+            }
+            const formatted = date.toISOString();
+            return isInsideJsonString(body, offset) ? escapeForJsonString(formatted) : formatted;
+          } catch {
+            const strValue = String(value);
+            return isInsideJsonString(body, offset) ? escapeForJsonString(strValue) : strValue;
+          }
+        },
+      );
 
       // 处理普通的 payload 属性
-      body = body.replace(/\{\{payload\.([^}]+)\}\}/g, (_, key: string) => {
+      body = body.replace(/\{\{payload\.([^}]+)\}\}/g, (match, key: string, offset: number) => {
         const value = this.getNestedValue(payloadObj, key);
         if (value === undefined) return "";
-        if (typeof value === "object") return JSON.stringify(value);
-        return String(value);
+
+        if (typeof value === "object") {
+          const jsonStr = JSON.stringify(value);
+          return isInsideJsonString(body, offset) ? escapeForJsonString(jsonStr) : jsonStr;
+        }
+
+        const strValue = String(value);
+        return isInsideJsonString(body, offset) ? escapeForJsonString(strValue) : strValue;
       });
     }
 
     // 尝试解析为 JSON，如果失败则作为字符串返回
     try {
       return JSON.parse(body);
-    } catch {
+    } catch (e) {
+      this.logger.warn(`Failed to parse template result as JSON: ${(e as Error).message}`);
+      this.logger.debug(`Template result: ${body}`);
       return body;
     }
   }
