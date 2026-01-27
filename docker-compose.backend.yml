@@ -57,15 +57,12 @@ services:
     networks:
       - webhook-backend-network
     labels:
-      # Dashboard (optional, access via https://DOMAIN/dashboard/)
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik-dashboard.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api/`) || PathPrefix(`/dashboard`))"
+      # Traefik Dashboard (optional, access via https://DOMAIN/dashboard/)
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`${DOMAIN}`) && PathPrefix(`/dashboard`)"
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      # Basic auth for dashboard (optional)
-      # - "traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth"
-      # - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
 
   # ----------------------------------------
   # PostgreSQL Database
@@ -140,4 +137,5 @@ volumes:
 # ----------------------------------------
 networks:
   webhook-backend-network:
+    name: webhook-backend-network
     driver: bridge
