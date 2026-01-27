@@ -1,0 +1,88 @@
+# ========================================
+# Docker Compose - Frontend with HTTPS (Let's Encrypt)
+# ========================================
+#
+# 前端独立部署，包含：
+#   - Traefik 反向代理 (自动 HTTPS + Let's Encrypt)
+#   - Nginx 服务静态文件
+#
+# 使用方法:
+#   1. 配置 .env 文件
+#   2. 启动: docker compose -f docker-compose.frontend-https.yml up -d
+#
+# 环境变量要求:
+#   - FRONTEND_DOMAIN: 前端域名 (如 www.example.com)
+#   - ACME_EMAIL: Let's Encrypt 邮箱
+#   - BACKEND_API_URL: 后端 API 地址 (如 https://api.example.com)
+#
+# ========================================
+
+services:
+  # ----------------------------------------
+  # Traefik - Reverse Proxy with Auto SSL
+  # ----------------------------------------
+  traefik:
+    image: traefik:v3.0
+    container_name: webhook-frontend-traefik
+    restart: unless-stopped
+    command:
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=webhook-frontend-network"
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # HTTP to HTTPS redirect
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Let's Encrypt ACME
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      # Logging
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "frontend_letsencrypt_data:/letsencrypt"
+    networks:
+      - webhook-frontend-network
+
+  # ----------------------------------------
+  # Frontend - React + Nginx
+  # ----------------------------------------
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile.standalone
+    container_name: webhook-frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_API_URL: ${BACKEND_API_URL:-https://api.example.com}
+    networks:
+      - webhook-frontend-network
+    labels:
+      - "traefik.enable=true"
+      # Frontend Router
+      - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_DOMAIN}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+
+# ----------------------------------------
+# Volumes
+# ----------------------------------------
+volumes:
+  frontend_letsencrypt_data:
+    driver: local
+
+# ----------------------------------------
+# Networks
+# ----------------------------------------
+networks:
+  webhook-frontend-network:
+    name: webhook-frontend-network
+    driver: bridge
