@@ -58,6 +58,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-webhook}
       DB_PASSWORD: ${DB_PASSWORD:-webhook123}
       DB_DATABASE: ${DB_DATABASE:-webhook_manager}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
       JWT_SECRET: ${JWT_SECRET:-change-this-in-production-please}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS:-10}
