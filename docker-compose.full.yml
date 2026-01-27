@@ -1,0 +1,157 @@
+# ========================================
+# Docker Compose - Full Stack (Frontend + Backend + HTTPS)
+# ========================================
+#
+# 前后端同一服务器部署，包含：
+#   - Traefik 反向代理 (自动 HTTPS + Let's Encrypt)
+#   - PostgreSQL 数据库
+#   - NestJS 后端 API
+#   - React 前端 (Nginx)
+#
+# 使用方法:
+#   1. 配置 .env 文件
+#   2. 启动: docker compose -f docker-compose.full.yml up -d
+#   3. 查看日志: docker compose -f docker-compose.full.yml logs -f
+#
+# 环境变量要求:
+#   - DOMAIN: 主域名 (如 12346.icu)，用于后端 API
+#   - FRONTEND_DOMAIN: 前端域名 (如 www.12346.icu)
+#   - ACME_EMAIL: Let's Encrypt 邮箱
+#
+# ========================================
+
+services:
+  # ----------------------------------------
+  # Traefik - Reverse Proxy with Auto SSL
+  # ----------------------------------------
+  traefik:
+    image: traefik:v3.0
+    container_name: webhook-traefik
+    restart: unless-stopped
+    command:
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=webhook-network"
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # HTTP to HTTPS redirect
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Let's Encrypt ACME
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      # Logging
+      - "--log.level=INFO"
+      - "--accesslog=true"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "letsencrypt_data:/letsencrypt"
+    networks:
+      - webhook-network
+
+  # ----------------------------------------
+  # PostgreSQL Database
+  # ----------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: webhook-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-webhook}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-webhook123}
+      POSTGRES_DB: ${DB_DATABASE:-webhook_manager}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USERNAME:-webhook} -d ${DB_DATABASE:-webhook_manager}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - webhook-network
+
+  # ----------------------------------------
+  # Backend - NestJS API
+  # ----------------------------------------
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: webhook-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-webhook}
+      DB_PASSWORD: ${DB_PASSWORD:-webhook123}
+      DB_DATABASE: ${DB_DATABASE:-webhook_manager}
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-please}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS:-10}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    networks:
+      - webhook-network
+    labels:
+      - "traefik.enable=true"
+      # Backend API - 处理 /api/* 和 /hook/*
+      # 可以通过主域名或前端域名访问 API
+      - "traefik.http.routers.backend.rule=(Host(`${DOMAIN}`) || Host(`${FRONTEND_DOMAIN}`)) && (PathPrefix(`/api`) || PathPrefix(`/hook`))"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=3000"
+
+  # ----------------------------------------
+  # Frontend - React + Nginx
+  # ----------------------------------------
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile
+    container_name: webhook-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - webhook-network
+    labels:
+      - "traefik.enable=true"
+      # Frontend - 处理前端域名的所有请求（除了 /api 和 /hook）
+      - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_DOMAIN}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      # 设置优先级，确保 /api 和 /hook 优先匹配 backend
+      - "traefik.http.routers.frontend.priority=1"
+      - "traefik.http.routers.backend.priority=10"
+
+# ----------------------------------------
+# Volumes
+# ----------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  letsencrypt_data:
+    driver: local
+
+# ----------------------------------------
+# Networks
+# ----------------------------------------
+networks:
+  webhook-network:
+    name: webhook-network
+    driver: bridge
