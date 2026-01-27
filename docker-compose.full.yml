@@ -43,8 +43,8 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      # Logging
-      - "--log.level=INFO"
+      # Logging (use DEBUG for troubleshooting)
+      - "--log.level=DEBUG"
       - "--accesslog=true"
     ports:
       - "80:80"
@@ -115,7 +115,10 @@ services:
       - "traefik.http.routers.backend.rule=(Host(`${DOMAIN}`) || Host(`${FRONTEND_DOMAIN}`)) && (PathPrefix(`/api`) || PathPrefix(`/hook`))"
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend.service=backend"
       - "traefik.http.services.backend.loadbalancer.server.port=3000"
+      # 设置较高优先级，确保 /api 和 /hook 优先匹配
+      - "traefik.http.routers.backend.priority=100"
 
   # ----------------------------------------
   # Frontend - React + Nginx
@@ -132,14 +135,12 @@ services:
       - webhook-network
     labels:
       - "traefik.enable=true"
-      # Frontend - 处理前端域名的所有请求（除了 /api 和 /hook）
+      # Frontend - 处理前端域名的所有请求
       - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_DOMAIN}`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend.service=frontend"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
-      # 设置优先级，确保 /api 和 /hook 优先匹配 backend
-      - "traefik.http.routers.frontend.priority=1"
-      - "traefik.http.routers.backend.priority=10"
 
 # ----------------------------------------
 # Volumes
