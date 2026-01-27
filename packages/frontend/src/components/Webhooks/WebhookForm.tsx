@@ -26,21 +26,114 @@ const { Panel } = Collapse;
 
 /**
  * JSON Template Editor component compatible with Ant Design Form
+ * 
+ * This editor handles JSON strings with newlines properly:
+ * - Displays: actual newlines for readability
+ * - Stores: escaped \n sequences for valid JSON
  */
 interface JsonTemplateEditorProps {
   value?: string;
   onChange?: (value: string) => void;
 }
 
+/**
+ * Convert stored JSON (with \\n) to display format (with actual newlines in strings)
+ */
+const toDisplayFormat = (json: string): string => {
+  if (!json) return "";
+  try {
+    // Parse the JSON to validate and get the object
+    const obj = JSON.parse(json);
+    // Re-stringify with indentation, which will keep \n as escaped
+    const formatted = JSON.stringify(obj, null, 2);
+    // Convert escaped newlines in string values to actual newlines for display
+    // This regex matches \\n that are inside JSON string values
+    return formatted.replace(/\\n/g, "\n");
+  } catch {
+    // If not valid JSON, return as-is
+    return json;
+  }
+};
+
+/**
+ * Convert display format (with actual newlines) to storage format (with \\n)
+ */
+const toStorageFormat = (display: string): string => {
+  if (!display) return "";
+  try {
+    // First, we need to escape actual newlines that are inside string values
+    // Parse line by line and reconstruct valid JSON
+    const lines = display.split("\n");
+    let result = "";
+    let inString = false;
+    let escapeNext = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        
+        if (escapeNext) {
+          escapeNext = false;
+          result += char;
+          continue;
+        }
+        
+        if (char === "\\") {
+          escapeNext = true;
+          result += char;
+          continue;
+        }
+        
+        if (char === '"') {
+          inString = !inString;
+        }
+        
+        result += char;
+      }
+      
+      // Add newline between lines, but escape it if we're inside a string
+      if (i < lines.length - 1) {
+        if (inString) {
+          result += "\\n";
+        } else {
+          result += "\n";
+        }
+      }
+    }
+    
+    // Validate the result is valid JSON
+    JSON.parse(result);
+    return result;
+  } catch {
+    // If conversion fails, return original
+    return display;
+  }
+};
+
 const JsonTemplateEditor = ({ value, onChange }: JsonTemplateEditorProps) => {
+  // Convert stored value to display format
+  const displayValue = toDisplayFormat(value || "");
+  
+  const handleChange = (val: string | undefined) => {
+    if (!val) {
+      onChange?.("");
+      return;
+    }
+    // Convert display format back to storage format
+    const storageValue = toStorageFormat(val);
+    onChange?.(storageValue);
+  };
+  
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
       <Editor
         height="200px"
         language="json"
         theme="vs-dark"
-        value={value || ""}
-        onChange={(val) => onChange?.(val || "")}
+        value={displayValue}
+        onChange={handleChange}
         options={{
           minimap: { enabled: false },
           fontSize: 13,
@@ -85,26 +178,28 @@ const TEMPLATE_HELP = `支持以下变量：
 • {{time}} - 接收时间 (ISO 格式)
 • {{time_cn}} - 接收时间 (中国时区)`;
 
-const TELEGRAM_TEMPLATE = `{
-  "chat_id": "YOUR_CHAT_ID",
-  "text": "**{{webhookName}}**\\n\\n收到 {{method}} 请求\\n时间: {{time_cn}}\\n\\n消息: {{payload.message}}",
-  "parse_mode": "Markdown"
-}`;
+// Templates are stored as valid JSON strings (with escaped \n)
+// The editor will display them with actual newlines for readability
+const TELEGRAM_TEMPLATE = JSON.stringify({
+  chat_id: "YOUR_CHAT_ID",
+  text: "**{{webhookName}}**\n\n收到 {{method}} 请求\n时间: {{time_cn}}\n\n消息: {{payload.message}}",
+  parse_mode: "Markdown"
+}, null, 2);
 
-const DINGTALK_TEMPLATE = `{
-  "msgtype": "markdown",
-  "markdown": {
-    "title": "{{webhookName}}",
-    "text": "### {{webhookName}}\\n\\n> 时间: {{time_cn}}\\n\\n{{payload.message}}"
+const DINGTALK_TEMPLATE = JSON.stringify({
+  msgtype: "markdown",
+  markdown: {
+    title: "{{webhookName}}",
+    text: "### {{webhookName}}\n\n> 时间: {{time_cn}}\n\n{{payload.message}}"
   }
-}`;
+}, null, 2);
 
-const WECHAT_TEMPLATE = `{
-  "msgtype": "markdown",
-  "markdown": {
-    "content": "### {{webhookName}}\\n> 时间: <font color=\\"comment\\">{{time_cn}}</font>\\n\\n{{payload.message}}"
+const WECHAT_TEMPLATE = JSON.stringify({
+  msgtype: "markdown",
+  markdown: {
+    content: "### {{webhookName}}\n> 时间: <font color=\"comment\">{{time_cn}}</font>\n\n{{payload.message}}"
   }
-}`;
+}, null, 2);
 
 const WebhookForm = ({ initialValues, onSubmit, onCancel }: WebhookFormProps) => {
   const [form] = Form.useForm();
