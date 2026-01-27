@@ -68,6 +68,35 @@ export class WebhookLogController {
 export class LogsController {
   constructor(private readonly webhookLogService: WebhookLogService) {}
 
+  @ApiOperation({ summary: "获取 Dashboard 统计数据" })
+  @ApiOkResponse({
+    schema: {
+      example: {
+        totalWebhooks: 5,
+        activeWebhooks: 4,
+        todayRequests: 150,
+        yesterdayRequests: 120,
+        successRate: 98.5,
+        avgResponseTime: 45,
+        weeklyData: [
+          { name: "周一", requests: 100, success: 95, failed: 5 },
+        ],
+        statusDistribution: [
+          { name: "成功", value: 85, color: "#22c55e" },
+          { name: "失败", value: 15, color: "#ef4444" },
+        ],
+        recentActivity: [
+          { id: "uuid", name: "GitHub Webhook", path: "github", time: "2 分钟前", method: "POST", success: true },
+        ],
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: "缺少或无效的 JWT" })
+  @Get("stats")
+  async getDashboardStats(@Req() req: Request) {
+    return await this.webhookLogService.getDashboardStats(getUserId(req));
+  }
+
   @ApiOperation({ summary: "获取当前用户所有 webhook 日志" })
   @ApiOkResponse({
     schema: {

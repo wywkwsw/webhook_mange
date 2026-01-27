@@ -13,6 +13,14 @@ import { UpdateWebhookDto } from "./dto/update-webhook.dto";
 import { WebhookListQueryDto } from "./dto/webhook-list-query.dto";
 import { Webhook } from "./entities/webhook.entity";
 
+export interface WebhookTestResult {
+  success: boolean;
+  statusCode: number;
+  responseTime: number;
+  message: string;
+  response?: Record<string, unknown>;
+}
+
 @Injectable()
 export class WebhookService {
   constructor(
@@ -264,5 +272,83 @@ export class WebhookService {
     }
 
     return result;
+  }
+
+  /**
+   * 测试 Webhook 端点
+   */
+  async testWebhook(userId: string, id: string): Promise<WebhookTestResult> {
+    const webhook = await this.findOne(userId, id);
+
+    if (!webhook.isActive) {
+      return {
+        success: false,
+        statusCode: 0,
+        responseTime: 0,
+        message: "Webhook 未启用，请先启用后再测试",
+      };
+    }
+
+    const testPayload = {
+      test: true,
+      message: "This is a test request from Webhook Manager",
+      timestamp: new Date().toISOString(),
+      webhook: {
+        id: webhook.id,
+        name: webhook.name,
+        path: webhook.path,
+      },
+    };
+
+    const startTime = Date.now();
+
+    try {
+      // Use dynamic import for fetch (Node.js 18+)
+      const port = process.env.PORT ?? "3000";
+      const testUrl = `http://localhost:${port}/hook/${webhook.path}`;
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-Webhook-Test": "true",
+      };
+
+      // Add secret if configured
+      if (webhook.secret) {
+        headers["X-Webhook-Secret"] = webhook.secret;
+      }
+
+      const response = await fetch(testUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(testPayload),
+      });
+
+      const responseTime = Date.now() - startTime;
+      let responseBody: Record<string, unknown> | undefined;
+
+      try {
+        responseBody = await response.json() as Record<string, unknown>;
+      } catch {
+        // Response might not be JSON
+      }
+
+      const success = response.status >= 200 && response.status < 300;
+
+      return {
+        success,
+        statusCode: response.status,
+        responseTime,
+        message: success ? "测试成功" : `测试失败: HTTP ${response.status}`,
+        response: responseBody,
+      };
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      return {
+        success: false,
+        statusCode: 0,
+        responseTime,
+        message: `测试失败: ${error instanceof Error ? error.message : "网络错误"}`,
+      };
+    }
   }
 }

@@ -1,13 +1,13 @@
-import { Card, Row, Col } from "antd";
+import { Card, Row, Col, Spin, Empty } from "antd";
 import {
   ApiOutlined,
   ThunderboltOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   ArrowUpOutlined,
+  ArrowDownOutlined,
 } from "@ant-design/icons";
-import { useWebhookStore } from "../store/webhookStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   AreaChart,
   Area,
@@ -20,68 +20,106 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import client from "../api/client";
+
+interface DashboardStats {
+  totalWebhooks: number;
+  activeWebhooks: number;
+  todayRequests: number;
+  yesterdayRequests: number;
+  successRate: number;
+  avgResponseTime: number;
+  weeklyData: { name: string; requests: number; success: number; failed: number }[];
+  statusDistribution: { name: string; value: number; color: string }[];
+  recentActivity: {
+    id: string;
+    name: string;
+    path: string;
+    time: string;
+    method: string;
+    success: boolean;
+  }[];
+}
 
 const Dashboard = () => {
-  const { webhooks, fetchWebhooks } = useWebhookStore();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchWebhooks();
-  }, [fetchWebhooks]);
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const response = await client.get<DashboardStats>("/logs/stats");
+        setStats(response.data);
+        setError(null);
+      } catch (err) {
+        setError("加载统计数据失败");
+        console.error("Failed to fetch dashboard stats:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // 模拟数据
-  const weeklyData = [
-    { name: "周一", requests: 820 },
-    { name: "周二", requests: 932 },
-    { name: "周三", requests: 901 },
-    { name: "周四", requests: 1234 },
-    { name: "周五", requests: 1290 },
-    { name: "周六", requests: 1330 },
-    { name: "周日", requests: 1450 },
-  ];
+    fetchStats();
+  }, []);
 
-  const statusData = [
-    { name: "成功", value: 85, color: "#22c55e" },
-    { name: "失败", value: 15, color: "#ef4444" },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Spin size="large" tip="加载中..." />
+      </div>
+    );
+  }
 
-  const recentActivity = [
-    { name: "支付通知", time: "2 分钟前", method: "POST", success: true },
-    { name: "用户注册", time: "5 分钟前", method: "POST", success: true },
-    { name: "告警系统", time: "12 分钟前", method: "GET", success: false },
-    { name: "订单回调", time: "15 分钟前", method: "POST", success: true },
-    { name: "日报任务", time: "1 小时前", method: "PUT", success: true },
-  ];
+  if (error || !stats) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Empty description={error || "暂无数据"} />
+      </div>
+    );
+  }
 
-  const stats = [
+  // Calculate request change percentage
+  const requestChange = stats.yesterdayRequests > 0 
+    ? ((stats.todayRequests - stats.yesterdayRequests) / stats.yesterdayRequests * 100).toFixed(1)
+    : stats.todayRequests > 0 ? "100" : "0";
+  const isRequestUp = Number(requestChange) >= 0;
+
+  const statCards = [
     {
       title: "Webhook 总数",
-      value: webhooks.length || 1,
+      value: stats.totalWebhooks,
       suffix: "个",
-      desc: `${webhooks.filter((w) => w.isActive).length || 1} 个已启用`,
+      desc: `${stats.activeWebhooks} 个已启用`,
       icon: <ApiOutlined />,
       color: "#3b82f6",
     },
     {
       title: "今日请求",
-      value: "1,450",
+      value: stats.todayRequests.toLocaleString(),
       suffix: "",
-      desc: "↑ 12.5% 较昨日",
+      desc: (
+        <span style={{ color: isRequestUp ? "#22c55e" : "#ef4444" }}>
+          {isRequestUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(Number(requestChange))}% 较昨日
+        </span>
+      ),
       icon: <ThunderboltOutlined />,
       color: "#f59e0b",
     },
     {
       title: "成功率",
-      value: "98.5",
+      value: stats.successRate.toFixed(1),
       suffix: "%",
-      desc: "运行状态良好",
+      desc: stats.successRate >= 95 ? "运行状态良好" : stats.successRate >= 80 ? "需要关注" : "异常",
       icon: <CheckCircleOutlined />,
-      color: "#22c55e",
+      color: stats.successRate >= 95 ? "#22c55e" : stats.successRate >= 80 ? "#f59e0b" : "#ef4444",
     },
     {
       title: "平均响应",
-      value: "45",
+      value: stats.avgResponseTime,
       suffix: "ms",
-      desc: "低延迟响应",
+      desc: stats.avgResponseTime < 100 ? "低延迟响应" : stats.avgResponseTime < 500 ? "响应正常" : "响应较慢",
       icon: <ClockCircleOutlined />,
       color: "#8b5cf6",
     },
@@ -97,7 +135,7 @@ const Dashboard = () => {
 
       {/* 统计卡片 */}
       <Row gutter={[16, 16]}>
-        {stats.map((stat, index) => (
+        {statCards.map((stat, index) => (
           <Col xs={24} sm={12} lg={6} key={index}>
             <div className="stat-card h-full">
               <div className="flex justify-between items-start">
@@ -138,50 +176,64 @@ const Dashboard = () => {
             bordered={false}
           >
             <div style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={weeklyData}>
-                  <defs>
-                    <linearGradient id="colorReq" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e2e8f0"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    stroke="#64748b"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="#64748b"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#ffffff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 8,
-                      color: "#1e293b",
-                    }}
-                    labelStyle={{ color: "#64748b" }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="requests"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorReq)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {stats.weeklyData.some(d => d.requests > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={stats.weeklyData}>
+                    <defs>
+                      <linearGradient id="colorReq" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#e2e8f0"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      stroke="#64748b"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="#64748b"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 8,
+                        color: "#1e293b",
+                      }}
+                      labelStyle={{ color: "#64748b" }}
+                      formatter={(value, name) => {
+                        const labels: Record<string, string> = {
+                          requests: "总请求",
+                          success: "成功",
+                          failed: "失败",
+                        };
+                        return [value ?? 0, labels[String(name)] || String(name)];
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="requests"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorReq)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <Empty description="暂无请求数据" />
+                </div>
+              )}
             </div>
           </Card>
         </Col>
@@ -189,45 +241,53 @@ const Dashboard = () => {
         <Col xs={24} lg={8}>
           <Card title="状态分布" bordered={false}>
             <div style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+              {stats.statusDistribution.some(d => d.value > 0) ? (
+                <>
+                  <ResponsiveContainer width="100%" height="80%">
+                    <PieChart>
+                      <Pie
+                        data={stats.statusDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {stats.statusDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          background: "#ffffff",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 8,
+                          color: "#1e293b",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex justify-center gap-6">
+                    {stats.statusDistribution.map((item, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ background: item.color }}
+                        />
+                        <span className="text-secondary text-sm">{item.name}</span>
+                        <span className="text-primary font-medium">
+                          {item.value}%
+                        </span>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: "#ffffff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 8,
-                      color: "#1e293b",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex justify-center gap-6 -mt-4">
-                {statusData.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ background: item.color }}
-                    />
-                    <span className="text-secondary text-sm">{item.name}</span>
-                    <span className="text-primary font-medium">
-                      {item.value}%
-                    </span>
                   </div>
-                ))}
-              </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <Empty description="暂无状态数据" />
+                </div>
+              )}
             </div>
           </Card>
         </Col>
@@ -243,38 +303,42 @@ const Dashboard = () => {
         }
         bordered={false}
       >
-        <div className="space-y-3">
-          {recentActivity.map((activity, index) => (
-            <div
-              key={index}
-              className="activity-item flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`status-dot ${activity.success ? "success" : "error"}`}
-                />
-                <div>
-                  <p className="text-primary m-0 font-medium">{activity.name}</p>
-                  <p className="text-muted text-xs m-0">{activity.time}</p>
+        {stats.recentActivity.length > 0 ? (
+          <div className="space-y-3">
+            {stats.recentActivity.map((activity) => (
+              <div
+                key={activity.id}
+                className="activity-item flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`status-dot ${activity.success ? "success" : "error"}`}
+                  />
+                  <div>
+                    <p className="text-primary m-0 font-medium">{activity.name}</p>
+                    <p className="text-muted text-xs m-0">/{activity.path} · {activity.time}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-xs font-medium px-2 py-1 rounded"
+                    style={{
+                      background: "rgba(59, 130, 246, 0.1)",
+                      color: "#3b82f6",
+                    }}
+                  >
+                    {activity.method}
+                  </span>
+                  <div
+                    className={`status-dot ${activity.success ? "success" : "error"}`}
+                  />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className="text-xs font-medium px-2 py-1 rounded"
-                  style={{
-                    background: "rgba(59, 130, 246, 0.1)",
-                    color: "#3b82f6",
-                  }}
-                >
-                  {activity.method}
-                </span>
-                <div
-                  className={`status-dot ${activity.success ? "success" : "error"}`}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <Empty description="暂无活动记录" />
+        )}
       </Card>
     </div>
   );

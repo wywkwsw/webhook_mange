@@ -115,6 +115,27 @@ export class WebhookController {
     return await this.webhookService.remove(userId, id);
   }
 
+  @ApiOperation({ summary: "测试 webhook 端点" })
+  @ApiOkResponse({
+    description: "测试结果",
+    schema: {
+      example: {
+        success: true,
+        statusCode: 200,
+        responseTime: 45,
+        message: "测试成功",
+        response: { received: true, path: "test" },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: "webhook 不存在" })
+  @ApiUnauthorizedResponse({ description: "缺少或无效的 JWT" })
+  @Post(":id/test")
+  async testWebhook(@Req() req: Request, @Param("id") id: string) {
+    const userId = getUserId(req);
+    return await this.webhookService.testWebhook(userId, id);
+  }
+
   @ApiOperation({ summary: "导出 webhook 配置" })
   @ApiOkResponse({
     description: "导出的 JSON 配置",

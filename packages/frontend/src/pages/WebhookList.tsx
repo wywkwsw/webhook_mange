@@ -27,11 +27,24 @@ import {
   ImportOutlined,
   DownOutlined,
   DownloadOutlined,
+  PlayCircleOutlined,
+  LoadingOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useWebhookStore } from "../store/webhookStore";
 import WebhookForm from "../components/Webhooks/WebhookForm";
 import type { Webhook, CreateWebhookDto, UpdateWebhookDto, WebhookExportData, ImportMode, ImportResult } from "../types/webhook";
+import client from "../api/client";
+
+interface WebhookTestResult {
+  success: boolean;
+  statusCode: number;
+  responseTime: number;
+  message: string;
+  response?: Record<string, unknown>;
+}
 
 const WebhookList = () => {
   const { webhooks, loading, fetchWebhooks, createWebhook, updateWebhook, deleteWebhook, exportWebhooks, importWebhooks } =
@@ -50,6 +63,9 @@ const WebhookList = () => {
   
   // 选中的 webhook（用于批量导出）
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  
+  // 测试相关状态
+  const [testingWebhookId, setTestingWebhookId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWebhooks();
@@ -110,6 +126,46 @@ const WebhookList = () => {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     message.success("已复制到剪贴板");
+  };
+
+  // 测试 Webhook
+  const handleTestWebhook = async (webhook: Webhook) => {
+    if (!webhook.isActive) {
+      message.warning("请先启用 Webhook 后再测试");
+      return;
+    }
+    
+    setTestingWebhookId(webhook.id);
+    try {
+      const response = await client.post<WebhookTestResult>(`/webhooks/${webhook.id}/test`);
+      const result = response.data;
+      
+      if (result.success) {
+        message.success({
+          content: (
+            <span>
+              <CheckCircleOutlined style={{ color: "#22c55e", marginRight: 8 }} />
+              测试成功！响应时间: {result.responseTime}ms
+            </span>
+          ),
+          duration: 3,
+        });
+      } else {
+        message.error({
+          content: (
+            <span>
+              <CloseCircleOutlined style={{ color: "#ef4444", marginRight: 8 }} />
+              {result.message}
+            </span>
+          ),
+          duration: 4,
+        });
+      }
+    } catch (err) {
+      message.error("测试请求失败，请检查网络连接");
+    } finally {
+      setTestingWebhookId(null);
+    }
   };
 
   // 导出功能
@@ -304,6 +360,16 @@ const WebhookList = () => {
       key: "actions",
       render: (_: unknown, record: Webhook) => (
         <Space>
+          <Tooltip title={record.isActive ? "测试" : "请先启用"}>
+            <Button
+              type="text"
+              size="small"
+              icon={testingWebhookId === record.id ? <LoadingOutlined spin /> : <PlayCircleOutlined />}
+              onClick={() => handleTestWebhook(record)}
+              disabled={testingWebhookId !== null}
+              style={{ color: record.isActive ? "#22c55e" : undefined }}
+            />
+          </Tooltip>
           <Tooltip title="详情">
             <Link to={`/webhooks/${record.id}`}>
               <Button type="text" size="small" icon={<LinkOutlined />} />
