@@ -116,6 +116,184 @@ curl http://localhost/api/docs
 
 ---
 
+## 分离部署（推荐）
+
+将前端和后端分开部署，便于独立维护和排查问题。
+
+### 方案概述
+
+| 部署文件                      | 包含服务                       | 适用场景        |
+| ----------------------------- | ------------------------------ | --------------- |
+| `docker-compose.backend.yml`  | Traefik + PostgreSQL + Backend | 后端 API 服务器 |
+| `docker-compose.frontend.yml` | Nginx + Frontend               | 前端静态服务器  |
+
+### 后端部署（带 Let's Encrypt 自动证书）
+
+#### 1. 配置环境变量
+
+```bash
+cp env.example .env
+nano .env
+```
+
+**必须配置**：
+
+```bash
+# 后端域名（必须已解析到服务器 IP）
+DOMAIN=api.example.com
+
+# Let's Encrypt 邮箱
+ACME_EMAIL=your-email@example.com
+
+# 数据库密码
+DB_PASSWORD=your-secure-password
+
+# JWT 密钥
+JWT_SECRET=$(openssl rand -base64 32)
+
+# CORS 允许的来源（前端域名）
+CORS_ORIGIN=https://www.example.com
+```
+
+#### 2. 启动后端服务
+
+```bash
+# 启动后端（包含 Traefik 自动 SSL）
+docker compose -f docker-compose.backend.yml up -d
+
+# 查看日志
+docker compose -f docker-compose.backend.yml logs -f
+
+# 查看 Traefik 证书状态
+docker compose -f docker-compose.backend.yml logs traefik
+```
+
+#### 3. 验证后端
+
+```bash
+# 测试 HTTPS 访问
+curl https://api.example.com/api/docs
+
+# 测试 Webhook 端点
+curl -X POST https://api.example.com/hook/test -d '{"test":true}'
+```
+
+**Let's Encrypt 证书说明**：
+
+- 证书自动获取，无需手动操作
+- 证书自动续期（到期前 30 天自动续）
+- 证书存储在 Docker Volume `letsencrypt_data` 中
+
+### 前端部署
+
+#### 1. 配置后端地址
+
+```bash
+nano .env
+```
+
+```bash
+# 后端 API 地址
+BACKEND_API_URL=https://api.example.com
+
+# 前端端口
+FRONTEND_PORT=80
+```
+
+#### 2. 启动前端服务
+
+```bash
+# 启动前端
+docker compose -f docker-compose.frontend.yml up -d
+
+# 查看日志
+docker compose -f docker-compose.frontend.yml logs -f
+```
+
+#### 3. 配置前端 HTTPS（可选）
+
+前端可以使用宝塔面板或 Nginx 反向代理配置 HTTPS：
+
+**宝塔面板**：
+
+1. 创建网站，域名填写前端域名
+2. 申请 SSL 证书
+3. 设置反向代理到 `http://127.0.0.1:80`
+
+**手动 Nginx 反向代理**：
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name www.example.com;
+
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+### 分离部署架构图
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        用户浏览器                            │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+          ┌───────────────┴───────────────┐
+          │                               │
+          ▼                               ▼
+┌─────────────────────┐       ┌─────────────────────┐
+│   前端服务器         │       │   后端服务器         │
+│   www.example.com   │       │   api.example.com   │
+├─────────────────────┤       ├─────────────────────┤
+│                     │       │    Traefik          │
+│    Nginx            │◀─────▶│    (Auto SSL)       │
+│    (静态文件)        │  API  │         │           │
+│                     │       │    Backend          │
+│                     │       │    (NestJS)         │
+│                     │       │         │           │
+│                     │       │    PostgreSQL       │
+└─────────────────────┘       └─────────────────────┘
+```
+
+### 常用命令
+
+```bash
+# === 后端 ===
+# 启动
+docker compose -f docker-compose.backend.yml up -d
+
+# 停止
+docker compose -f docker-compose.backend.yml down
+
+# 查看日志
+docker compose -f docker-compose.backend.yml logs -f backend
+
+# 重建
+docker compose -f docker-compose.backend.yml up -d --build backend
+
+# === 前端 ===
+# 启动
+docker compose -f docker-compose.frontend.yml up -d
+
+# 停止
+docker compose -f docker-compose.frontend.yml down
+
+# 查看日志
+docker compose -f docker-compose.frontend.yml logs -f
+
+# 重建
+docker compose -f docker-compose.frontend.yml up -d --build
+```
+
+---
+
 ## 配置说明
 
 ### 环境变量

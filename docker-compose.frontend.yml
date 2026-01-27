@@ -1,0 +1,46 @@
+# ========================================
+# Docker Compose - Frontend Only
+# ========================================
+#
+# 前端独立部署，包含：
+#   - Nginx 服务静态文件
+#   - 反向代理到后端 API
+#
+# 使用方法:
+#   1. 复制 env.example 为 .env 并配置 BACKEND_API_URL
+#   2. 启动: docker compose -f docker-compose.frontend.yml up -d
+#   3. 查看日志: docker compose -f docker-compose.frontend.yml logs -f
+#   4. 停止: docker compose -f docker-compose.frontend.yml down
+#
+# 环境变量要求:
+#   - BACKEND_API_URL: 后端 API 地址 (如 https://api.example.com)
+#   - FRONTEND_PORT: 前端监听端口 (默认 80)
+#
+# 注意：如果后端也在同一服务器，可以使用宝塔等反向代理配置 HTTPS
+#
+# ========================================
+
+services:
+  # ----------------------------------------
+  # Frontend - React + Nginx
+  # ----------------------------------------
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile.standalone
+    container_name: webhook-frontend
+    restart: unless-stopped
+    environment:
+      # 后端 API 地址（必须配置为实际后端地址）
+      BACKEND_API_URL: ${BACKEND_API_URL:-https://api.example.com}
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks:
+      - webhook-frontend-network
+
+# ----------------------------------------
+# Networks
+# ----------------------------------------
+networks:
+  webhook-frontend-network:
+    driver: bridge
