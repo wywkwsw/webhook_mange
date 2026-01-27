@@ -228,11 +228,6 @@ const History = () => {
     setDeleteModalOpen(true);
   };
 
-  // Show webhook delete modal
-  const showWebhookDeleteModal = () => {
-    setWebhookDeleteModalOpen(true);
-  };
-
   // Confirm delete by webhook
   const handleConfirmWebhookDelete = () => {
     if (!selectedWebhookForDelete) {
@@ -270,11 +265,6 @@ const History = () => {
       },
     });
     setDeleteModalOpen(true);
-  };
-
-  // Show date delete modal
-  const showDateDeleteModal = () => {
-    setDateDeleteModalOpen(true);
   };
 
   // Confirm delete by date

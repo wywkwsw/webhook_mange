@@ -10,7 +10,6 @@ import {
   Card,
   Input,
   Tooltip,
-  Upload,
   Radio,
   Alert,
   Dropdown,

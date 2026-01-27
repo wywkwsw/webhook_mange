@@ -18,7 +18,7 @@ import {
 } from "@ant-design/icons";
 import type { ForwardConfig } from "../../types/webhook";
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 const { TextArea } = Input;
 const { Panel } = Collapse;
 

@@ -1,0 +1,36 @@
+# ========================================
+# Backend Dockerfile - Prebuilt Version
+# ========================================
+# 使用本地编译好的 dist 目录，无需在容器内编译
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy pre-built application (本地编译产物)
+COPY dist ./dist
+
+# Change ownership to non-root user
+RUN chown -R nestjs:nodejs /app
+
+USER nestjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/docs || exit 1
+
+# Start the application
+CMD ["node", "dist/src/main.js"]
